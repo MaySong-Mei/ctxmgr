@@ -22,14 +22,16 @@ requires = ["uv_build>=0.13.0,<0.14.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
+serve = [
+    "vllm==0.30.0 ; sys_platform == 'linux'",
+]
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.17.0",
 ]
 
-[tool.uv]
-# vLLM only runs on the Linux GPU nodes; install there with `uv sync --group serve`.
-# Pin a version that supports Qwen3_5ForConditionalGeneration once verified on the cluster.
+# vLLM only runs on the Linux GPU nodes (cluster): `uv sync --group serve`.
+# 0.30.0 is the first pinned version verified to ship qwen3_5.py.
 
 [tool.ruff]
 line-length = 100
