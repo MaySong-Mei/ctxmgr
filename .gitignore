@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Large / generated artifacts — keep on the cluster project dir, not in git
+models/
+hf_cache/
+results/
+runs/
+logs/
+*.safetensors
+slurm-*.out
+.env
+.DS_Store

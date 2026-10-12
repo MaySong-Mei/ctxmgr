@@ -1,0 +1,35 @@
+[project]
+name = "ctxmgr"
+version = "0.1.0"
+description = "Who should manage an LLM agent's context? Self vs. peer managers across Qwen3.5 sizes."
+readme = "README.md"
+authors = [
+    { name = "Ruthvik Edara" },
+    { name = "Hancheng Xiang" },
+    { name = "May Mei" },
+]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "openai>=3.29.0",
+    "pandas>=3.0.6",
+    "pyyaml>=6.0.3",
+    "tiktoken>=0.14.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.0",
+]
+
+[tool.uv]
+# vLLM only runs on the Linux GPU nodes; install there with `uv sync --group serve`.
+# Pin a version that supports Qwen3_5ForConditionalGeneration once verified on the cluster.
+
+[tool.ruff]
+line-length = 100
