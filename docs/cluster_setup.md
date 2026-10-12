@@ -41,6 +41,6 @@ All computation goes through Slurm (`sbatch slurm/...`) — never on login nodes
 ```bash
 mkdir -p logs
 sbatch slurm/setup_env.sbatch Qwen/Qwen3.5-0.8B   # CPU node: uv, vLLM, weights
-sbatch slurm/serve_smoke.sbatch Qwen/Qwen3.5-0.8B # 1 GPU: serve + smoke test
+sbatch slurm/serve_smoke.sbatch Qwen/Qwen3.5-0.8B # 1 GPU: serve + smoke test (several models OK)
 squeue -u $USER
 ```

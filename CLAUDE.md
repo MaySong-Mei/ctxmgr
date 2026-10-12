@@ -55,7 +55,7 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
 ## Dev
 
 - Python 3.12, uv. `uv sync`, `uv run pytest`, `uv run ruff check .`.
-- Pilot: `sbatch slurm/setup_env.sbatch [models]` (CPU node) then `sbatch slurm/serve_smoke.sbatch [model] [max_len]` (1 GPU).
+- Pilot: `sbatch slurm/setup_env.sbatch [models]` (CPU node) then `sbatch slurm/serve_smoke.sbatch [model ...]` (1 GPU; env MAX_LEN, GPU_UTIL).
 
 ## Open decisions
 
