@@ -39,5 +39,6 @@ for _ in $(seq 1 120); do
 done
 curl -sf "http://127.0.0.1:${PORT}/health" >/dev/null || { echo "server not healthy after 10 min"; exit 1; }
 
-uv run python scripts/smoke_test.py --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}"
+uv run python scripts/smoke_test.py --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}" \
+    --out "logs/smoke-${SLURM_JOB_ID}.json"
 nvidia-smi --query-gpu=memory.used,memory.total --format=csv
