@@ -17,3 +17,7 @@ export HF_HUB_DISABLE_TELEMETRY=1
 export VLLM_NO_USAGE_STATS=1
 
 mkdir -p "${HF_HOME}" "${UV_CACHE_DIR}" "${VLLM_CACHE_ROOT}" "${TRITON_CACHE_DIR}" logs
+
+# No nvcc on GPU nodes (cluster CUDA modules top out at 12.9; our torch is cu13), so FlashInfer's
+# JIT-compiled sampler fails. Use vLLM's PyTorch sampler; attention uses FLASH_ATTN (no JIT).
+export VLLM_USE_FLASHINFER_SAMPLER=0
