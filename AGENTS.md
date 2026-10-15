@@ -36,7 +36,7 @@ Login needs Duo, which only May can approve on May's phone. Pattern:
    }
    EOF
    ```
-3. On timeout, do not resend pushes in a loop; ask May when she is ready (or for a Duo passcode).
+3. On timeout, do not resend pushes in a loop; ask May when they are ready (or for a Duo passcode).
 
 Connectivity: off campus, SSH needs the Yale VPN. If `bouchet.ycrc.yale.edu` does not resolve,
 Tailscale DNS may be shadowing it. Check with `nc -z -G 8 bouchet.ycrc.yale.edu 22`.
