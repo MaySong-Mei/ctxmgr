@@ -34,3 +34,20 @@ On the cluster GPU nodes, vLLM is installed separately (Linux + CUDA only); see 
 - Run all computation through Slurm, never on login nodes.
 - Store model weights and results in the course **project** directory (backed up). Scratch is purged after 30 days.
 - Qwen3.5-27B (bf16, ~56 GB) fits on no single GPU → use the official `Qwen3.5-27B-FP8` (~31 GB) on an A40.
+
+## Tasks and evaluation (Track 1)
+
+Ruthvik owns this track. We use the now-released official ContextBench at a pinned commit, with exact o200k counts, feasibility gates and per-turn snapshot grading. See [task setup and harness interface](docs/tasks-and-evaluation.md), [pilot task levels](configs/tasks-pilot.yaml), [64-instance oracle audit](docs/task-audit.csv), and [benchmark literature brief](docs/benchmark-literature.md).
+
+```bash
+uv sync --locked
+uv run python -m ctxmgr.tasks generate kv_store --level R130 --seed 42 --out runs/tasks/kv-R130-s42
+uv run python -m ctxmgr.tasks oracle runs/tasks/kv-R130-s42 --run-dir runs/oracle/kv-R130-s42
+uv run pytest -q
+```
+
+These commands run locally. On Bouchet, run every Python command through Slurm. Oracle scores validate task plumbing only; they are not model results. Keep evaluator gold and future operations inaccessible to the actor/manager.
+
+## Team coordination
+
+Owners: Ruthvik — Track 1 (tasks/evaluation); Hancheng — Track 2 (harness/managers); May — Track 3 (infra/runs/analysis). Read [AGENTS.md](AGENTS.md) for shared agent instructions and [project status](docs/project-status.md) for handoffs, blockers and the first real-model pilot.

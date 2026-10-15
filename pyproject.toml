@@ -10,6 +10,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "contextbench[tokenizer]",
     "matplotlib>=3.11.2",
     "openai>=3.29.0",
     "pandas>=3.0.6",
@@ -28,6 +29,9 @@ dev = [
 ]
 
 [tool.uv]
+
+[tool.uv.sources]
+contextbench = { git = "https://github.com/RulinShao/ContextBench.git", rev = "fb533c18c78a82d3f1b2047a9c1700735cf829ae" }
 # vLLM only runs on the Linux GPU nodes; install there with `uv sync --group serve`.
 # Pin a version that supports Qwen3_5ForConditionalGeneration once verified on the cluster.
 
