@@ -50,6 +50,8 @@ ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_ycrc -C "<netid>@<device>-wsl"   # se
 cat ~/.ssh/id_ed25519_ycrc.pub   # paste at https://sshkeys.ycrc.yale.edu/
 ```
 
+Or run `bash scripts/setup_wsl_ssh.sh` inside Ubuntu, which does the steps above and below.
+
 Use the same `~/.ssh/config` block as above, minus `UseKeychain yes` (macOS only). Load the key
 with `eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519_ycrc`. The reachability check differs:
 `nc -z -w 8 bouchet.ycrc.yale.edu 22` (`-G` is macOS-only). Yale VPN must be connected on Windows;
