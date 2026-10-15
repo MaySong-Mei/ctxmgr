@@ -59,7 +59,7 @@ def main():
     rows = audit(args.seeds)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("x", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     print(f"PASS: {len(rows)} official task instances; all oracle scores 1.0; {args.out}")
