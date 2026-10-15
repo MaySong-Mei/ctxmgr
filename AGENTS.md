@@ -39,7 +39,10 @@ Login needs Duo, which only May can approve on May's phone. Pattern:
 3. On timeout, do not resend pushes in a loop; ask May when they are ready (or for a Duo passcode).
 
 Connectivity: off campus, SSH needs the Yale VPN. If `bouchet.ycrc.yale.edu` does not resolve,
-Tailscale DNS may be shadowing it. Check with `nc -z -G 8 bouchet.ycrc.yale.edu 22`.
+Tailscale DNS may be shadowing it. Check with `nc -z -G 8 bouchet.ycrc.yale.edu 22` (macOS) or
+`nc -z -w 8 bouchet.ycrc.yale.edu 22` (Linux/WSL).
+On Windows, run all SSH steps inside WSL (Ubuntu), never Windows OpenSSH: it lacks `ControlMaster`.
+WSL is a separate device with its own key; setup in `docs/cluster_setup.md`.
 The master dies when the machine sleeps or changes network; jobs keep running regardless.
 
 On the cluster, the repo clone is at `/nfs/roberts/project/cpsc4880/$USER/ctxmgr`, tracking
@@ -77,5 +80,5 @@ Known quirks:
   32K context; a failure there is a result, not a bug to hide.
 - After that: 9B on an A5000; concurrent-throughput benchmark per size for the GPU-hour budget;
   a mock end-to-end grid runner (load once, many concurrent instances, per-step logs, compute
-  accounting from CLM `flops_metrics/`); agree log format with Tracks 1/2.
+  accounting from CLM `flops_metrics/`); agree log format with Tracks 1/2 (draft: `docs/log_schema.md`).
 - Open team decisions are listed in `CLAUDE.md`.

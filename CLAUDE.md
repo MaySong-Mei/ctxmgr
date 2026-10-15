@@ -66,3 +66,13 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
 - Precision for 9B; how to run the 9B × fixed-27B-manager cell.
 - Instances / pressure levels / seeds per cell → total GPU-hours under the 1-GPU limit.
 - Whether to ask course staff for a higher GPU limit.
+- Prior-art check: does the CLM paper's multi-agent section already run an equivalent peer-manager
+  comparison? Settle before the core grid; it decides the novelty claim.
+- Extra baselines from the proposal: periodic scheduled summarization, and oracle retention (keep only
+  state known to be needed; `oracle − observed` measures context-management loss). In or out of the grid?
+- Manager scope: the peer manager may only edit context (same edit tools as self-management), never
+  answer the task or add reasoning, or task skill leaks into the peer conditions.
+- Effective context budget: one fixed task-level budget across all actor sizes (separate from vLLM
+  `max_len`), so native window differences do not confound scaling.
+- Context-management metrics to log from the first run (draft schema in `docs/log_schema.md`): peak
+  context, compression ratio, edit count/timing, required info kept, irrelevant info kept, destructive edits.
