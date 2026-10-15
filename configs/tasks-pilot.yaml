@@ -1,0 +1,15 @@
+# Track 1 task inputs only; serving and method conditions belong to other tracks.
+upstream_commit: fb533c18c78a82d3f1b2047a9c1700735cf829ae
+budget: 32768
+reserve: 2048
+seeds: [42, 43, 44, 45]
+# These are official named levels, not exact nominal pressure ratios.
+families:
+  kv_store:
+    levels: [R130, R1000, R2000]
+  needle_retention:
+    levels: [K4-C4, K4-C24, K8-C48]
+primary_metric: official.reward
+grading_source: snapshots
+# Optional follow-up seeds; do not tune prompts against these.
+held_out_seeds: [46, 47, 48, 49]
