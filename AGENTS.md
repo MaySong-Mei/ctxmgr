@@ -19,7 +19,7 @@ Each machine needs its own SSH key and config (see `docs/cluster_setup.md`; neve
 between machines). The agent expects an SSH host alias `bouchet-cpsc4880` with
 `ControlMaster auto`, `ControlPath ~/.ssh/cm-%r@%h:%p`, `ControlPersist 4h`.
 
-Login needs Duo, which only May can approve on her phone. Pattern:
+Login needs Duo, which only May can approve on May's phone. Pattern:
 
 1. `ssh -O check bouchet-cpsc4880` — if a master is running, use `ssh -o BatchMode=yes bouchet-cpsc4880 '<cmd>'`.
 2. Otherwise tell May a Duo push is coming, then open the master with `expect`, answering option 1 (push):
