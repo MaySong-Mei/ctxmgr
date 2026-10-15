@@ -2,6 +2,7 @@
 
 Course project (Yale, cluster course id `cpsc4880`): who should manage an LLM agent's context?
 This repo is public — never commit credentials, cluster usernames, model weights or results.
+Agent operating instructions and current status: @AGENTS.md
 
 ## Experiment
 
