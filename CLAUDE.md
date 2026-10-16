@@ -69,7 +69,16 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   (173 at 0.90, 79 at 0.75); fix `--max-num-seqs 64`. 9B with online FP8 crashed in torch.compile
   (Inductor "auto_functionalized was not removed", vLLM 0.30 / torch 2.13); fix `--enforce-eager`
   (eager decode is a lower bound) or an offline FP8 checkpoint. Actors never started, so co-location
-  fit is still unknown. Both fixes are in the script; not yet re-run.
+  fit is still unknown. Both fixes are in the script.
+- Pilot (2026-10-16, A40 re-run with `--max-num-seqs 64`, max_len 32K): job exit 1 (3 of 5 phases fail).
+  27B-FP8 alone (util 0.90) PASS: Marlin weight-only FP8 kernel, KV 9.03 GiB = 128K tokens (3.9× 32K),
+  27K-token probe correct (prefill 22 s), decode 20.3 tok/s. Co-located 27B-FP8 (0.75) + 2B (0.21) PASS,
+  both smoke tests concurrently: 27B KV 63K tokens (1.9× 32K), decode still 20.3 tok/s, prefill 28 s;
+  2B KV 342K tokens, 58 tok/s (vs 128 alone); 43.1 of 46.1 GB used. 27B + 4B FAIL on capacity: 4B weights
+  8.0 GiB leave −0.19 GiB KV in the 0.21 share. 9B online FP8 FAIL (alone and co-located): vLLM picks the
+  CUTLASS w8a8 kernel, which errors on Ampere (`cutlass_scaled_mm_sm80_epilogue`); the 27B checkpoint
+  works because it gets Marlin. 9B-FP8 weights are 10.4 GiB, above the 0.21 share (~9.4 GiB) anyway.
+  So on one A40 only 2B (and presumably 0.8B) can sit beside the 27B manager at 32K.
 
 ## Dev
 
@@ -79,9 +88,10 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
 ## Open decisions
 
 - Precision for 9B; how to run the 9B × fixed-27B-manager cell.
-- Where the fixed 27B manager runs: co-located at util 0.75 it has ~54K KV tokens (~1.65 concurrent 32K
-  requests), so manager calls would serialize. Alternatives: 27B alone on the A40 (8.3 GiB KV) serving
-  manager calls in a separate phase, or batching all peer_27b cells per actor. Decide after the re-run.
+- Where the fixed 27B manager runs: co-located at util 0.75 it has ~63K KV tokens (~1.9 concurrent 32K
+  requests), so manager calls would serialize, and only 2B/0.8B actors fit beside it (4B and 9B do not).
+  Alternatives: 27B alone on the A40 (128K KV tokens) serving manager calls in a separate phase, or
+  batching all peer_27b cells per actor.
 - Instances / pressure levels / seeds per cell → total GPU-hours under the 1-GPU limit.
 - Whether to ask course staff for a higher GPU limit.
 - Prior-art check: does the CLM paper's multi-agent section already run an equivalent peer-manager

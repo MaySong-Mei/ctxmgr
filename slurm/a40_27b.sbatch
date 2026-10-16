@@ -27,7 +27,7 @@ ACTOR_UTIL="${ACTOR_UTIL:-0.21}"
 # max_num_seqs (default 256) exceeds the blocks that fit (27B-FP8: 173 at util 0.90, 79 at 0.75).
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-64}"
 # Online FP8 crashes torch.compile in vLLM 0.30 / torch 2.13 ("auto_functionalized was not removed"),
-# so 9B-FP8 runs eager (no CUDA graphs): its decode speed is a lower bound.
+# so 9B-FP8 runs eager. On the A40 it still fails (CUTLASS sm80 scaled_mm error, 2026-10-16 run).
 FP8=(--quantization fp8 --enforce-eager)
 P1=$((20000 + SLURM_JOB_ID % 10000))
 P2=$((P1 + 1))

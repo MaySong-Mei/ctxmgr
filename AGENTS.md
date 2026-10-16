@@ -66,22 +66,18 @@ Known quirks:
 - uv warns it cannot hardlink (cache on scratch, venv on project); harmless.
 - vLLM startup takes 2–4 min per model (compile + CUDA graphs); avoid many short jobs.
 
-## Status (2026-10-15)
+## Status (2026-10-16)
 
 - Done: environment on cluster (vLLM 0.30.0, torch 2.13 cu13); 0.8B/2B/4B/9B downloaded and
   smoke-tested (results in `CLAUDE.md`); English pilot report written for the team (Claude Docs).
-  27B-FP8 downloaded; first `a40_27b.sbatch` run failed on configuration in every phase (details in
-  `CLAUDE.md`); fixed in the script (`--max-num-seqs 64`, 9B-FP8 `--enforce-eager`).
-- Next: re-run on the A40 (weights already cached, no setup job needed):
-  ```bash
-  sbatch slurm/a40_27b.sbatch
-  ```
-  It runs 27B-FP8 alone, 9B with online FP8 alone, then 27B-FP8 (75% memory) co-located with a
-  2B / 4B / 9B-FP8 actor (21%). 4B and 9B may not fit at 32K context; a failure there is a result,
-  not a bug to hide.
+  27B-FP8 downloaded and smoke-tested on the A40 (`a40_27b.sbatch` re-run): 27B alone and 27B + 2B
+  co-located pass; 27B + 4B does not fit; 9B online FP8 fails on Ampere (details in `CLAUDE.md`).
 - vLLM gotchas for Qwen3.5 (hybrid attention): set `--max-num-seqs` at or below the Mamba state
-  blocks the log reports; online `--quantization fp8` needs `--enforce-eager` on vLLM 0.30.
-- After that: 9B on an A5000; concurrent-throughput benchmark per size for the GPU-hour budget;
+  blocks the log reports. Online `--quantization fp8` is unusable on the A40 with vLLM 0.30
+  (torch.compile crash; with `--enforce-eager`, CUTLASS sm80 kernel error). Offline FP8 checkpoints
+  (Marlin kernel) work.
+- Next: decide 9B precision (bf16 alone on A40/A5000, or an offline FP8 checkpoint) and where the
+  27B manager runs (open decisions in `CLAUDE.md`); 9B on an A5000; concurrent-throughput benchmark per size for the GPU-hour budget;
   a mock end-to-end grid runner (load once, many concurrent instances, per-step logs, compute
   accounting from CLM `flops_metrics/`); agree log format with Tracks 1/2 (draft: `docs/log_schema.md`).
 - Open team decisions are listed in `CLAUDE.md`.
