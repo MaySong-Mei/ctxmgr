@@ -66,18 +66,21 @@ Known quirks:
 - uv warns it cannot hardlink (cache on scratch, venv on project); harmless.
 - vLLM startup takes 2–4 min per model (compile + CUDA graphs); avoid many short jobs.
 
-## Status (2026-10-14)
+## Status (2026-10-15)
 
 - Done: environment on cluster (vLLM 0.30.0, torch 2.13 cu13); 0.8B/2B/4B/9B downloaded and
   smoke-tested (results in `CLAUDE.md`); English pilot report written for the team (Claude Docs).
-- Next, not yet submitted (blocked on VPN when last tried):
+  27B-FP8 downloaded; first `a40_27b.sbatch` run failed on configuration in every phase (details in
+  `CLAUDE.md`); fixed in the script (`--max-num-seqs 64`, 9B-FP8 `--enforce-eager`).
+- Next: re-run on the A40 (weights already cached, no setup job needed):
   ```bash
-  S=$(sbatch --parsable slurm/setup_env.sbatch Qwen/Qwen3.5-27B-FP8)
-  sbatch --dependency=afterok:$S slurm/a40_27b.sbatch
+  sbatch slurm/a40_27b.sbatch
   ```
-  `slurm/a40_27b.sbatch` (untested on the cluster) runs 27B-FP8 alone, 9B with online FP8 alone, then
-  27B-FP8 (75% memory) co-located with a 2B / 4B / 9B-FP8 actor (21%). 4B and 9B may not fit at
-  32K context; a failure there is a result, not a bug to hide.
+  It runs 27B-FP8 alone, 9B with online FP8 alone, then 27B-FP8 (75% memory) co-located with a
+  2B / 4B / 9B-FP8 actor (21%). 4B and 9B may not fit at 32K context; a failure there is a result,
+  not a bug to hide.
+- vLLM gotchas for Qwen3.5 (hybrid attention): set `--max-num-seqs` at or below the Mamba state
+  blocks the log reports; online `--quantization fp8` needs `--enforce-eager` on vLLM 0.30.
 - After that: 9B on an A5000; concurrent-throughput benchmark per size for the GPU-hour budget;
   a mock end-to-end grid runner (load once, many concurrent instances, per-step logs, compute
   accounting from CLM `flops_metrics/`); agree log format with Tracks 1/2 (draft: `docs/log_schema.md`).

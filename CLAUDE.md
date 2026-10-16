@@ -61,6 +61,15 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
 - Pilot (2026-10-14, A40, max_len 32K, gpu_util 0.90; single-request decode is memory-bandwidth bound):
   2B: 3.6 GiB weights, KV 2.72M tok, 128 tok/s · 4B: 8.0 GiB, KV 0.88M tok, 59 tok/s ·
   9B: 16.8 GiB, KV 0.60M tok, 33 tok/s. All recalled the 27K-token KV probe. 9B on A5000 still untested.
+- Pilot (2026-10-15, A40, `slurm/a40_27b.sbatch` first run, max_len 32K): every phase FAILED, all on
+  configuration, none on capacity. 27B-FP8 download 5 min (setup job OK). 27B-FP8 loads: 28.0 GiB
+  weights, 25 s (8 s cached); torch.compile 48 s first time (later cached). Alone at util 0.90: 8.32 GiB
+  left for KV; co-location share 0.75: 3.79 GiB = 53,930 tokens, i.e. only 1.65 concurrent 32K requests
+  for the manager. Both then refused to start: default `max_num_seqs` 256 exceeds the Mamba state blocks
+  (173 at 0.90, 79 at 0.75); fix `--max-num-seqs 64`. 9B with online FP8 crashed in torch.compile
+  (Inductor "auto_functionalized was not removed", vLLM 0.30 / torch 2.13); fix `--enforce-eager`
+  (eager decode is a lower bound) or an offline FP8 checkpoint. Actors never started, so co-location
+  fit is still unknown. Both fixes are in the script; not yet re-run.
 
 ## Dev
 

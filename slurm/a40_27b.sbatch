@@ -23,6 +23,12 @@ MAX_LEN="${MAX_LEN:-32768}"
 # Memory split for co-location; the manager starts first and takes its share.
 BIG_UTIL="${BIG_UTIL:-0.75}"
 ACTOR_UTIL="${ACTOR_UTIL:-0.21}"
+# Hybrid attention: each running sequence needs one Mamba state block, and vLLM refuses to start if
+# max_num_seqs (default 256) exceeds the blocks that fit (27B-FP8: 173 at util 0.90, 79 at 0.75).
+MAX_NUM_SEQS="${MAX_NUM_SEQS:-64}"
+# Online FP8 crashes torch.compile in vLLM 0.30 / torch 2.13 ("auto_functionalized was not removed"),
+# so 9B-FP8 runs eager (no CUDA graphs): its decode speed is a lower bound.
+FP8=(--quantization fp8 --enforce-eager)
 P1=$((20000 + SLURM_JOB_ID % 10000))
 P2=$((P1 + 1))
 J="${SLURM_JOB_ID}"
@@ -32,7 +38,8 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 declare -A status
 
 echo "===== phase 1: ${BIG} alone ====="
-start_server "${BIG}" "${P1}" 0.90 "${MAX_LEN}" "logs/vllm-${J}-27b-alone.log"
+start_server "${BIG}" "${P1}" 0.90 "${MAX_LEN}" "logs/vllm-${J}-27b-alone.log" \
+    --max-num-seqs "${MAX_NUM_SEQS}"
 if wait_healthy "${P1}" "${SERVER_PID}" "logs/vllm-${J}-27b-alone.log" \
     && smoke "${P1}" "${BIG}" "logs/smoke-${J}-27b-alone.json"; then
     status[27b_alone]=PASS; gpu_mem
@@ -42,7 +49,8 @@ fi
 stop_server "${SERVER_PID}"
 
 echo "===== phase 2: Qwen3.5-9B online FP8 alone ====="
-start_server "Qwen/Qwen3.5-9B" "${P1}" 0.90 "${MAX_LEN}" "logs/vllm-${J}-9b-fp8.log" --quantization fp8
+start_server "Qwen/Qwen3.5-9B" "${P1}" 0.90 "${MAX_LEN}" "logs/vllm-${J}-9b-fp8.log" \
+    --max-num-seqs "${MAX_NUM_SEQS}" "${FP8[@]}"
 if wait_healthy "${P1}" "${SERVER_PID}" "logs/vllm-${J}-9b-fp8.log" \
     && smoke "${P1}" "Qwen/Qwen3.5-9B" "logs/smoke-${J}-9b-fp8.json"; then
     status[9b_fp8]=PASS; gpu_mem
@@ -53,12 +61,13 @@ stop_server "${SERVER_PID}"
 
 for actor in "${ACTORS[@]}"; do
     tag="${actor##*/}"
-    extra=()
+    extra=(--max-num-seqs "${MAX_NUM_SEQS}")
     # 9B in bf16 cannot fit beside 27B-FP8; try it as online FP8 (the candidate 9B precision).
-    [[ "${tag}" == "Qwen3.5-9B" ]] && extra=(--quantization fp8)
+    [[ "${tag}" == "Qwen3.5-9B" ]] && extra+=("${FP8[@]}")
     echo "===== phase 3: ${BIG} (${BIG_UTIL}) + ${actor} (${ACTOR_UTIL}) ${extra[*]} ====="
 
-    start_server "${BIG}" "${P1}" "${BIG_UTIL}" "${MAX_LEN}" "logs/vllm-${J}-coloc-${tag}-big.log"
+    start_server "${BIG}" "${P1}" "${BIG_UTIL}" "${MAX_LEN}" "logs/vllm-${J}-coloc-${tag}-big.log" \
+        --max-num-seqs "${MAX_NUM_SEQS}"
     big_pid=${SERVER_PID}
     ok=0
     if wait_healthy "${P1}" "${big_pid}" "logs/vllm-${J}-coloc-${tag}-big.log"; then
