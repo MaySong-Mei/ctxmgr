@@ -6,14 +6,20 @@ Agent operating instructions and current status: @AGENTS.md
 
 ## Experiment
 
-Core grid = actor size × 4 conditions, run on ContextBench-style tasks rebuilt from CLM Appendix D
-(KV Store, Needle Retention; seeded, o200k token counts, pressure levels).
+Core grid = actor size × 4 conditions on the official ContextBench (released; pinned at
+`fb533c18c78a82d3f1b2047a9c1700735cf829ae`, Track 1 adapter and contract in `docs/tasks-and-evaluation.md`
+on `ruthvik/track1-tasks`, PR #1). Families: KV Store and Needle Retention at official named levels.
 
 - Actors: Qwen3.5 dense instruct models 0.8B, 2B, 4B, 9B, 27B (not the `-Base` variants).
-- Conditions: no management · CLM self-management · same-size peer manager · fixed 27B peer manager.
-  Self and peer managers use the same edit tools and instructions; the manager triggers at a context threshold.
-- Metrics: exact-value accuracy, loss of required info, compute including manager calls
-  (adapt CLM `flops_metrics/`).
+- Conditions: no management · CLM self-management · same-size peer manager · fixed 27B peer manager
+  (a 27B actor gets none / self / same-size peer only). Self and peer managers use the same edit tools
+  and instructions; the manager triggers at a context threshold.
+- Budget: 32,768 o200k tokens with 2,048 reserved, same for every actor size. Exact o200k is required;
+  served-model (Qwen) token counts are logged separately.
+- Metrics: official ContextBench reward graded from per-turn context snapshots (KV: ANSWER blocks across
+  snapshots; Needle: lines in the final snapshot), plus Track 1's strict diagnostics, plus compute
+  including manager calls (adapt CLM `flops_metrics/`). The gold oracle is an implementation check,
+  never a baseline.
 
 ## Tracks / ownership
 
@@ -68,11 +74,13 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
 - Whether to ask course staff for a higher GPU limit.
 - Prior-art check: does the CLM paper's multi-agent section already run an equivalent peer-manager
   comparison? Settle before the core grid; it decides the novelty claim.
-- Extra baselines from the proposal: periodic scheduled summarization, and oracle retention (keep only
-  state known to be needed; `oracle − observed` measures context-management loss). In or out of the grid?
+- Deferred per the instructor's core grid (Track 1 AGENTS.md): scheduled summarization, next-size-up
+  peers, MoE. Suggest dropping the proposal's oracle-retention baseline: ContextBench's gold oracle reads the answer
+  key and is only an implementation check.
 - Manager scope: the peer manager may only edit context (same edit tools as self-management), never
   answer the task or add reasoning, or task skill leaks into the peer conditions.
-- Effective context budget: one fixed task-level budget across all actor sizes (separate from vLLM
-  `max_len`), so native window differences do not confound scaling.
-- Context-management metrics to log from the first run (draft schema in `docs/log_schema.md`): peak
-  context, compression ratio, edit count/timing, required info kept, irrelevant info kept, destructive edits.
+- Served context length: the 32K budget is in o200k tokens, but vLLM `max_len` counts Qwen tokens, which
+  can be more for the same text. Measure Qwen/o200k ratio on real episodes; `max_len` = 32,768 (as in the
+  pilots) may need headroom, which changes KV memory and co-location fit.
+- Context-management logging from the first run (draft in `docs/log_schema.md`): per-call usage by role,
+  edits, triggers, termination, on top of ContextBench snapshots.

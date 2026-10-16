@@ -1,84 +1,85 @@
 # Run log schema (draft, Track 3 → for agreement with Tracks 1/2)
 
-Status: **proposal**. Track 3 (accounting, analysis) consumes these logs; Track 2 writes them; Track 1
-supplies the ground-truth fields. Nothing here is final until all three tracks sign off.
+Status: **proposal**. Track 2 writes these logs, Track 3 (accounting, analysis) reads them, and Track 1's
+contract (`docs/tasks-and-evaluation.md` on `ruthvik/track1-tasks`) is the source of truth for scoring.
+Nothing here is final until all three tracks sign off.
 
-Goal: every metric in the proposal can be computed offline from logs, without rerunning jobs.
-Format: one JSONL file per (actor size, condition, task, pressure level, seed) episode, one line per event.
-Token counts use the model's own tokenizer (`*_tokens`) plus o200k (`*_tokens_o200k`) for cross-size comparison.
+Principle: task scores come only from ContextBench's own artifacts. Our logs add what ContextBench does not
+record (per-call usage by role, edits, triggers, served-tokenizer counts), keyed so they join to its turns.
 
-## Episode header (first line, `"event": "episode_start"`)
+## Run directory
 
-| Field | Type | Notes |
-|---|---|---|
-| `run_id` | str | Grid run identifier (git SHA + config hash) |
-| `episode_id` | str | Unique per episode |
-| `task` | str | `kv_store` / `needle_retention` / … (Track 1) |
-| `pressure` | str | Pressure level name (Track 1) |
-| `seed` | int | Instance seed |
-| `condition` | str | `none` / `self` / `peer_same` / `peer_27b` (+ `scheduled_summary` / `oracle` if adopted) |
-| `actor_model`, `manager_model` | str | HF ids; `manager_model` null for `none` / `self` uses actor id |
-| `actor_precision`, `manager_precision` | str | `bf16` / `fp8` |
-| `context_budget_o200k` | int | Fixed task-level budget, same across sizes |
-| `manager_trigger_o200k` | int | Context size that triggers management |
-| `required_facts` | list | Track 1 ground truth: `{fact_id, text, needed_until_step}`; `needed_until_step` lets us flag destructive edits |
+One directory per episode = (actor size, condition, family, level, seed), written by `contextbench.run`
+(or a custom loop following the same convention), plus our files:
 
-## Model call (`"event": "call"`)
+```
+runs/<run_id>/<actor>/<condition>/<family>-<level>-s<seed>/
+  context_snapshots/turn-*.json   # ContextBench: live messages + o200k tokens per turn (scored)
+  result.json                     # ContextBench: incl. terminated_by
+  episode.json                    # ours: header below
+  calls.jsonl                     # ours: one line per LLM request
+  edits.jsonl                     # ours: one line per applied context edit
+  score.json                      # Track 1: score_run() output (official + diagnostics)
+```
 
-One line per LLM request, actor or manager.
+The instance directory (with `gold.json` and `manifest.json`) stays outside the run directory and outside
+any model-accessible tool. Generated instances are reused unchanged across all conditions.
 
-| Field | Type | Notes |
-|---|---|---|
-| `step` | int | Environment step the call belongs to |
-| `role` | str | `actor` / `manager` |
-| `model` | str | HF id |
-| `prompt_tokens`, `completion_tokens` | int | From vLLM usage |
-| `cached_prompt_tokens` | int | Prefix-cache hits, if available |
-| `thinking_tokens` | int | Reasoning tokens if thinking is on |
-| `latency_s` | float | Wall time |
+## `episode.json`
 
-## Context edit (`"event": "edit"`)
+| Field | Notes |
+|---|---|
+| `run_id` | Grid run id (git SHA + config hash) |
+| `family`, `level`, `seed` | ContextBench named level and seed |
+| `instance_sha256` | From the instance `manifest.json`, so a run can't be scored against the wrong instance |
+| `condition` | `none` / `self` / `peer_same` / `peer_27b` |
+| `actor_model`, `manager_model` | HF ids incl. revision; `manager_model` = actor for `self`, null for `none` |
+| `actor_precision`, `manager_precision` | `bf16` / `fp8` |
+| `budget`, `reserve` | 32768 / 2048 (o200k) |
+| `manager_trigger_o200k` | Context size that triggers management |
+| `served_max_len` | vLLM `max_len` for each server (Qwen tokens) |
+| `prompt_version`, `sampling` | Method prompt version; temperature / top_p / max_tokens / thinking on-off |
+| `vllm_version`, `repo_commit`, `contextbench_commit` | Provenance |
 
-One line per applied edit (self or peer).
+## `calls.jsonl` (one line per LLM request)
 
-| Field | Type | Notes |
-|---|---|---|
-| `step` | int | |
-| `editor` | str | `actor` (self) / `manager` (peer) |
-| `op` | str | CLM edit tool name (Track 2) |
-| `context_before_o200k`, `context_after_o200k` | int | Size around the edit |
-| `facts_removed` | list[str] | `fact_id`s present before and absent after (Track 1 matcher) |
-| `facts_still_needed_removed` | list[str] | Subset with `needed_until_step > step` → destructive |
+| Field | Notes |
+|---|---|
+| `turn` | ContextBench turn index the call belongs to (matches `turn-*.json`) |
+| `role` | `actor` / `manager` |
+| `model` | HF id |
+| `prompt_tokens`, `completion_tokens` | Served-model (Qwen) counts from vLLM usage |
+| `prompt_tokens_o200k` | Same prompt in o200k, to measure the Qwen/o200k ratio |
+| `cached_prompt_tokens` | Prefix-cache hits, if reported |
+| `reasoning_tokens` | If thinking is on |
+| `latency_s` | Wall time |
 
-## Step end (`"event": "step"`)
+## `edits.jsonl` (one line per applied edit, self or peer)
 
-| Field | Type | Notes |
-|---|---|---|
-| `step` | int | |
-| `context_o200k` | int | Context size after the step |
-| `required_present` | int | Required facts still needed and present in context |
-| `irrelevant_o200k` | int | Tokens not attributable to required facts or instructions (Track 1 estimator) |
+| Field | Notes |
+|---|---|
+| `turn` | Edit applies at the start of this turn, after the previous turn was snapshotted |
+| `editor` | `actor` (self) / `manager` (peer) |
+| `trigger` | `threshold` / `self_initiated` |
+| `op` | CLM edit tool name (Track 2) |
+| `context_before_o200k`, `context_after_o200k` | Live context size around the edit |
 
-## Episode end (`"event": "episode_end"`)
-
-| Field | Type | Notes |
-|---|---|---|
-| `answer`, `gold` | str | Final answer and ground truth |
-| `correct` | bool | Exact-value match (Track 1 scorer) |
-| `status` | str | `ok` / `context_overflow` / `max_steps` / `error` |
+Destroyed information is not inferred per edit here: Needle loss comes from the final snapshot
+(`required_info_loss`), and a missing KV answer does not prove loss if the value was offloaded.
 
 ## Derived metrics (Track 3, `src/ctxmgr/analysis/`)
 
-- Accuracy by size × condition × pressure.
-- Peak context = max `context_o200k`; compression ratio = Σ`context_before` / Σ`context_after` over edits.
-- Edit count and timing (steps, and context size at trigger).
-- Required info kept = `required_present` / needed facts, per step and at the end.
-- Destructive edits = count of non-empty `facts_still_needed_removed`.
-- Compute = Σ calls by role; FLOPs via `src/ctxmgr/accounting/` (adapted from CLM `flops_metrics/`),
-  always reporting actor + manager together.
+- Accuracy: `score.json` → `official.reward` by size × condition × level; strict diagnostics alongside.
+- Completion: `result.json.terminated_by`; budget-wall runs are reported, never dropped or counted as done.
+- Peak context: `diagnostics.observed_peak_tokens` (o200k, from snapshots).
+- Edits: count, turn of first edit, compression = Σ`context_before` / Σ`context_after`.
+- Compute: Σ tokens per role from `calls.jsonl`; FLOPs via `src/ctxmgr/accounting/` (adapted from CLM
+  `flops_metrics/`), always actor + manager together.
+- Served-length check: Qwen/o200k prompt ratio per model, to size vLLM `max_len`.
 
-## Open questions for Tracks 1/2
+## Open questions
 
-1. Can Track 1's generator emit `required_facts` with `needed_until_step` for both task families?
-2. How does the fact matcher decide presence after a rewrite (exact string, normalized value, or LLM judge)?
-3. Does the harness log the full context text per step (large, but enables re-analysis) or only sizes?
+1. Track 2: does the harness use `contextbench.run` as-is (then calls/edits are logged from the agent
+   wrapper), or a custom loop that must reproduce the snapshot convention?
+2. Track 2: how is a manager call attributed to a turn when it runs between turns?
+3. All: keep full prompts/completions per call (large, enables re-analysis) or only the counts above?

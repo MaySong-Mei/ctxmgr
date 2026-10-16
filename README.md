@@ -2,7 +2,8 @@
 
 Who should manage an LLM agent's context? We compare **no management**, **CLM self-management**,
 a **same-size peer manager**, and a **fixed 27B peer manager** across Qwen3.5 actor sizes
-(0.8B, 2B, 4B, 9B, 27B) on ContextBench-style tasks (KV Store, Needle Retention, CLM Appendix D).
+(0.8B, 2B, 4B, 9B, 27B) on the official [ContextBench](https://github.com/RulinShao/ContextBench)
+KV Store and Needle Retention tasks (pinned revision; Track 1 adapter in `src/ctxmgr/tasks/`).
 
 ## Layout
 
