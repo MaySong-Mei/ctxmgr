@@ -79,6 +79,9 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
 ## Open decisions
 
 - Precision for 9B; how to run the 9B × fixed-27B-manager cell.
+- Where the fixed 27B manager runs: co-located at util 0.75 it has ~54K KV tokens (~1.65 concurrent 32K
+  requests), so manager calls would serialize. Alternatives: 27B alone on the A40 (8.3 GiB KV) serving
+  manager calls in a separate phase, or batching all peer_27b cells per actor. Decide after the re-run.
 - Instances / pressure levels / seeds per cell → total GPU-hours under the 1-GPU limit.
 - Whether to ask course staff for a higher GPU limit.
 - Prior-art check: does the CLM paper's multi-agent section already run an equivalent peer-manager
