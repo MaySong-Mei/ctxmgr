@@ -70,18 +70,87 @@ def client(completions):
     return SimpleNamespace(chat=SimpleNamespace(completions=completions))
 
 
-def test_apply_edits_protects_header_and_reports_bad_ids():
-    messages = [
-        {"role": r, "content": str(i)}
-        for i, r in enumerate(["system", "user", "user", "assistant"])
-    ]
+def blocks(n):
+    roles = ["system", "user"] + ["user", "assistant"] * n
+    return [{"role": r, "content": str(i)} for i, r in enumerate(roles[: n + 2])]
+
+
+def contents(messages):
+    return [m["content"] for m in messages]
+
+
+def test_apply_edits_applies_valid_edits_and_reports_unknown_ones():
+    messages = blocks(2)
     result = management.apply_edits(
         messages,
-        [{"op": "delete", "ids": [0, 3]}, {"op": "replace", "id": 2, "text": "kept"}, {"op": "x"}],
+        [{"op": "delete", "ids": [3]}, {"op": "replace", "id": 2, "text": "kept"}, {"op": "x"}],
     )
-    assert [m["content"] for m in messages] == ["0", "1", "kept"]
-    assert {"op": "delete", "ids": [3]} in result.applied
-    assert "bad delete ids" in result.error and "unknown edit" in result.error
+    assert contents(messages) == ["0", "1", "kept"]
+    assert result.applied == [{"op": "delete", "ids": [3]}, {"op": "replace", "id": 2, "chars": 4}]
+    assert "unknown edit" in result.error
+
+
+def test_delete_naming_protected_ids_is_rejected_whole():
+    # 2B's pilot reply: "delete every block from 0 up". Before, ids 0/1 were dropped and the rest
+    # applied, wiping the context.
+    messages = blocks(10)
+    for edit in (
+        {"op": "delete", "ids": list(range(12))},
+        {"op": "delete", "from": 0, "to": 11},
+        {"op": "delete", "ids": [1, 5]},
+    ):
+        result = management.apply_edits(messages, [edit])
+        assert result.applied == [] and "protected" in result.error
+    assert len(messages) == 12
+
+
+def test_delete_with_missing_or_malformed_ids_is_rejected_whole():
+    messages = blocks(4)
+    for edit in (
+        {"op": "delete", "ids": [3, 99]},
+        {"op": "delete", "ids": [3, "4"]},
+        {"op": "delete", "ids": [3, True]},
+        {"op": "delete", "ids": []},
+        {"op": "delete", "from": 4, "to": 3},
+        {"op": "delete", "from": 2, "to": 9},
+        {"op": "delete", "ids": [3], "from": 2, "to": 3},
+        {"op": "delete"},
+    ):
+        result = management.apply_edits(messages, [edit])
+        assert result.applied == [] and result.error, edit
+    assert len(messages) == 6
+
+
+def test_rejected_delete_does_not_block_other_edits():
+    messages = blocks(4)
+    result = management.apply_edits(
+        messages, [{"op": "delete", "ids": [0, 2]}, {"op": "delete", "ids": [4]}]
+    )
+    assert contents(messages) == ["0", "1", "2", "3", "5"]
+    assert result.applied == [{"op": "delete", "ids": [4]}] and "protected" in result.error
+
+
+def test_delete_range_is_inclusive():
+    messages = blocks(10)
+    result = management.apply_edits(messages, [{"op": "delete", "from": 2, "to": 9}])
+    assert contents(messages) == ["0", "1", "10", "11"]
+    assert result.applied == [{"op": "delete", "ids": list(range(2, 10))}]
+    assert result.error is None
+
+
+def test_edit_with_id_and_text_but_no_op_is_a_replace():
+    messages = blocks(2)
+    result = management.apply_edits(messages, [{"id": 3, "text": "summary"}])
+    assert contents(messages) == ["0", "1", "2", "summary"]
+    assert result.applied == [{"op": "replace", "id": 3, "chars": 7}] and result.error is None
+    # Still subject to the same checks as an explicit replace.
+    result = management.apply_edits(messages, [{"id": 0, "text": "x"}, {"ids": [2]}])
+    assert contents(messages) == ["0", "1", "2", "summary"]
+    assert "bad replace id 0" in result.error and "unknown edit" in result.error
+
+
+def test_instructions_offer_ranges():
+    assert '"from"' in management.EDIT_INSTRUCTIONS and '"to"' in management.EDIT_INSTRUCTIONS
 
 
 def test_parse_edits_tolerates_prose_and_rejects_garbage():
@@ -130,6 +199,8 @@ def test_self_management_exchange_stays_out_of_the_context(tmp_path):
     assert any(c["role"] == "self_manager" for c in calls)
     edits = [json.loads(line) for line in (out / "edits.jsonl").read_text().splitlines()]
     assert edits and all(e["editor"] == "actor" for e in edits)
+    # The raw manager reply is logged next to the parsed edits.
+    assert all(e["reply"].startswith("Sure:\n{") for e in edits)
     for path in sorted((out / "context_snapshots").glob("turn-*.json")):
         messages = json.loads(path.read_text(encoding="utf-8"))["messages"]
         assert not any(m["content"].startswith("[CONTEXT MANAGEMENT]") for m in messages)
