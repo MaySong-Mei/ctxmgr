@@ -143,6 +143,7 @@ class ManagedAgent(ChatAgent):
                 "context_after_o200k": count_tokens(self.messages)[0],
                 "applied": result.applied,
                 "error": error or result.error,
+                "reply": reply,
             }
         )
 
