@@ -131,6 +131,46 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - 2B KV R130 reproduces the RTX 5000 Ada run exactly; 2B Needle K4-C4 does not (14 turns vs 11):
     temp 0 is not bitwise deterministic across GPU types, so keep one GPU type per comparison.
   - The vLLM ERROR lines in the 0.8B log are shutdown noise when the server is stopped between models.
+- First managed pilot (2026-10-17, `may/track2-baseline` aa5b2f8 = draft management c717c61 + manager
+  reply logged in `edits.jsonl`; pytest 33 passed on a CPU node first). One A5000 job, 2B and 4B ×
+  none / self / peer_same × KV R1000 / Needle K4-C24, same fixed settings as the scaling baseline,
+  trigger 18,432 o200k, `MAX_LEN=49152`. Turns = actor calls. Events = management calls; "applied" /
+  "error" count events with any applied edit / any error (one event can be both). Tokens = prompt +
+  completion summed per role.
+
+  | model | cond | level | end | turns | reward | diag | peak | events | applied/err | tokens actor · manager |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | 2B | none | KV R1000 | budget_wall | 6 | 0 (0/24) | strict 0 | 34,908 | 0 | – | 132K · – |
+  | 2B | self | KV R1000 | budget_wall | 6 | 0 (0/24) | strict 0 | 34,908 | 3 | 0/0 | 132K · 95K |
+  | 2B | peer_same | KV R1000 | budget_wall | 6 | 0 (0/24) | strict 0 | 34,908 | 3 | 0/1 | 132K · 96K |
+  | 2B | none | Needle K4-C24 | budget_wall | 7 | 0.33 (32/96) | loss 0.67 | 33,245 | 0 | – | 166K · – |
+  | 2B | self | Needle K4-C24 | stream_exhausted | 24 | 0.17 (16/96) | loss 0.83 | 22,828 | 4 | 4/4 | 425K · 123K |
+  | 2B | peer_same | Needle K4-C24 | budget_wall | 17 | 0.17 (16/96) | loss 0.83 | 31,482 | 6 | 1/6 | 404K · 208K |
+  | 4B | none | KV R1000 | budget_wall | 6 | 0 (0/24) | strict 0 | 35,058 | 0 | – | 133K · – |
+  | 4B | self | KV R1000 | budget_wall | 6 | 0 (0/24) | strict 0 | 35,058 | 3 | 0/3 | 133K · 98K |
+  | 4B | peer_same | KV R1000 | budget_wall | 6 | 0 (0/24) | strict 0 | 35,058 | 3 | 0/3 | 133K · 96K |
+  | 4B | none | Needle K4-C24 | budget_wall | 7 | 0.33 (32/96) | loss 0.67 | 34,022 | 0 | – | 169K · – |
+  | 4B | self | Needle K4-C24 | budget_wall | 7 | 0.33 (32/96) | loss 0.67 | 34,536 | 3 | 3/0 | 169K · 111K |
+  | 4B | peer_same | Needle K4-C24 | budget_wall | 19 | 0.33 (32/96) | loss 0.67 | 33,506 | 11 | 8/4 | 481K · 369K |
+
+  Manager replies (`edits.jsonl`): the JSON is usually parseable, but the edits are almost never useful.
+  - 2B: either `{"edits": []}` (all KV events, both conditions) or "delete every block from 0 up".
+    `apply_edits` drops the protected ids and applies the rest, so each such event wiped the context to
+    ~600 tokens (needles included): 2B self Needle went 21.5K → 0.6K four times and ended with half
+    the reward of no management. Long id lists also hit the 2,048 cap, leaving JSON unclosed ("no JSON
+    object").
+  - 4B KV: wrote replace edits without `"op"` (rejected as unknown), tried to replace protected block 0,
+    or echoed a whole SET-BATCH block until the cap. Had they applied, they would have overwritten its
+    replies with "stored all key-value pairs K00000–K00099" summaries (values lost). No KV edit applied.
+  - 4B peer Needle deleted filler blocks correctly (`delete [10]`, `[10, 11]`, ~4K o200k each), which
+    stretched the episode from 7 to 19 turns, but too little was freed and the reward stayed 0.33.
+    4B self Needle only replaced its own reply with a needle list (context grew), so it ended like none.
+  - Managers cost a lot: 50–80% of the actor's tokens (4B peer Needle 369K vs 481K).
+  - For Track 2 before freezing the protocol: reject a delete that names protected ids instead of
+    applying the rest; decide whether a missing `"op"` with `id`+`text` means replace; allow id ranges
+    or give the manager more than 2,048 output tokens; KV R1000 needs a way to keep values while
+    dropping SET-BATCH blocks (the actor never printed ANSWER blocks before the wall).
+  - 2B log has the usual 8 shutdown ERROR lines; 4B none. KV caches: 2B 1.39M, 4B 387K tokens.
 
 ## Dev
 
