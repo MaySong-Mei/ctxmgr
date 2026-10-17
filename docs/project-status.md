@@ -10,6 +10,17 @@ May's `may/track3-infra` branch is now available (inspected at `98b98a8`): it in
 
 The shared repo should carry code, interface contracts, setup instructions, decisions and aggregate results. `AGENTS.md` contains portable team instructions. Each person's private notes may add context but must not be required to run the project.
 
+### Track 2 baseline scaffold (`may/track2-baseline`, May, 2026-10-16)
+
+Branched from this Track 1 branch to unblock the first end-to-end check; Hancheng owns Track 2 and is
+free to rework or replace it. Contents: `src/ctxmgr/harness/` with a `ChatAgent` implementing the
+ContextBench runner protocol on vLLM's OpenAI API and the no-management condition only (thinking off,
+temperature 0, max_tokens 2048); `run_episode` writes `episode.json`, `calls.jsonl` and `score.json`
+next to ContextBench's snapshots, as drafted in `docs/log_schema.md` on `may/track3-infra`;
+`slurm/baseline_smoke.sbatch` serves one model (`max_len` 40960 for Qwen/o200k headroom) and runs KV R130
+and Needle K4-C4 at seed 42. Self/peer management should subclass `ChatAgent` and act in
+`before_turn()`. Tested locally with a fake client only (28 tests pass); no real-model episode yet.
+
 ## Immediate handoffs
 
 | Owner | Next deliverable | What this unblocks |
