@@ -88,6 +88,12 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   2,048 max_tokens > 40,960) while still under the o200k budget (peak 24.6K), so its 0.75 (12/16) is
   not a full-episode score. Qwen/o200k ratio: 1.25 on KV, 1.40 on Needle. 2B often hit the 2,048-token
   completion cap on Needle. Runs are under `runs/baseline-<job>` in the project dir (not in git).
+- Needle K4-C4 re-run (2026-10-16, same instance hash, 2B, `MAX_LEN=49152`, RTX 5000 Ada): job COMPLETED,
+  no vLLM errors. Turns 1–9 identical to the 40,960 run (temp 0), then the episode ended at turn 11 on
+  ContextBench's o200k `budget_wall` (peak 31.4K o200k, above budget − reserve = 30,720, so
+  `snapshot_budget_exceeded` is true). Official reward 1.0 (16/16), required-info loss 0, strict
+  verbatim retention 1.0. Max Qwen prompt 42,076 + 2,048 completion fits 49,152; ratio 1.37–1.40.
+  8 of 11 completions hit the 2,048 cap (`finish_reason=length`). KV cache at 49,152: 1.90M tokens.
 
 ## Dev
 
@@ -113,7 +119,9 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
 - Served context length: the 32K budget is in o200k tokens, but vLLM `max_len` counts Qwen tokens, which
   can be more for the same text. Measured ratio 1.25 (KV) to 1.40 (Needle) on the 2B baseline, and
   40,960 was too small for Needle. Covering the full 30,720-token o200k context at 1.40 plus a 2,048
-  completion needs ~45K, so `max_len` 49,152 is the candidate; this shrinks KV memory and co-location fit.
+  completion needs ~45K, so `max_len` 49,152 is the candidate; it let the 2B Needle episode reach the
+  o200k budget wall (peak prompt 42K Qwen). It shrinks KV memory and co-location fit (27B at util 0.75
+  would hold ~1.3 such requests).
 - Strict KV diagnostic (Track 1): exact match fails on formatting like a stray `>` after the ANSWER tag
   (0/24 strict vs 24/24 official on the 2B baseline). Decide whether strict should strip such tag debris.
 - Context-management logging from the first run (draft in `docs/log_schema.md`): per-call usage by role,
