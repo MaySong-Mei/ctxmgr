@@ -4,6 +4,12 @@
 export LLAMA_BUILD="b11306"
 export LLAMA_BIN="${PROJECT_DIR}/llama.cpp/${LLAMA_BUILD}"
 export GGUF_DIR="${PROJECT_DIR}/gguf"
+# Built against these modules (slurm/llamacpp_setup.sbatch): nvcc at build time, and libcudart,
+# libcublas and GCC 13's libstdc++ at run time. Lmod reads unset variables, so relax -u around it.
+set +u
+type module >/dev/null 2>&1 || source /etc/profile.d/modules.sh
+module load GCC/13.3.0 CUDA/12.8.0 CMake/3.31.8-GCCcore-13.3.0
+set -u
 export LD_LIBRARY_PATH="${LLAMA_BIN}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 # start_llama <gguf> <port> <ctx> <log> [extra llama-server args...]
