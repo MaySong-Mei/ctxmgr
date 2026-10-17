@@ -26,17 +26,39 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
 - Shared action space for every managed condition: the context is numbered blocks; the editor replies
   with one JSON object of `delete` / `replace` edits; blocks 0–1 (system prompt, task instruction) are
   protected. Same edit instructions text for all conditions.
+- Edit contract (hardened after the first managed pilot, PR #4; rules also in the module docstring):
+  - `{"op": "delete", "ids": [...]}` or `{"op": "delete", "from": a, "to": b}` (inclusive range, so
+    long deletes stay short under the 2,048-token cap); both forms are in the edit instructions. An
+    edit with both `ids` and `from`/`to` is rejected.
+  - A delete is all-or-nothing: if it names a protected (0/1), missing or non-integer id, the whole
+    edit is rejected and reported in `error`. Before, the bad ids were dropped and the rest applied,
+    which turned 2B's "delete 0..N" into a wipe of every editable block. Range endpoints are checked
+    before the range is expanded.
+  - `{"op": "replace", "id": i, "text": "..."}` rewrites one block.
+  - A missing `op` is inferred when unambiguous: `id` + `text` → replace (4B wrote replaces this way),
+    `ids` or `from`/`to` without `text` → delete, with the same checks. Inferred edits are logged with
+    `"inferred_op": true` so protocol slips stay countable (issue #3). Anything else is rejected.
+  - Negative ids are invalid (reported as bad ids, not as protected blocks).
+  - Edits in one reply are checked independently: a rejected edit doesn't block the others.
+  - Conflicts in one reply: a block both replaced and deleted keeps its replacement (the delete skips
+    it); a block replaced twice keeps the last text. Both are reported in `error`, and `applied` lists
+    only what took effect.
 - Trigger: before a turn, when the live context exceeds 18,432 o200k tokens (60% of the 30,720 wall).
 - `self`: the actor gets the edit request appended to its own conversation (it already holds the full
   text, so it sees block ids with short previews). `peer_same` / `peer_27b`: a separate manager session
   with its own system prompt gets the whole context rendered as numbered blocks. `peer_same` uses the
   actor's server as a separate session.
 - The management exchange is never kept in the actor's context; manager calls are logged with role
-  `self_manager` / `manager` in `calls.jsonl`, and edits (sizes before/after, applied ops, parse errors)
-  in `edits.jsonl`. Malformed edit replies apply nothing and are logged.
+  `self_manager` / `manager` in `calls.jsonl`, and edits (sizes before/after, applied ops, parse and
+  rejection errors, and the manager's raw reply as `reply`) in `edits.jsonl`. Malformed edit replies
+  apply nothing and are logged.
 - Open: trigger value; whether self should see full text instead of previews; whether `replace` may
-  rewrite user operations; manager output budget (currently the same 2,048 max_tokens).
-Tested with fake clients only (33 tests pass).
+  rewrite user operations; manager output budget (currently the same 2,048 max_tokens; long replaces
+  can still hit it); KV R1000 has no way to keep values while dropping SET-BATCH blocks.
+- First managed pilot (2B/4B, 2026-10-17) ran on the pre-hardening protocol; results in `CLAUDE.md` on
+  `may/track3-infra`.
+Tested with fake clients only: `uv run pytest -q` 43 passed, Ruff check/format clean (local, after the
+PR #4 review fixes, 2026-10-17; 39 passed on a Bouchet CPU node before them).
 
 ## Immediate handoffs
 
