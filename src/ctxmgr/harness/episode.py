@@ -1,7 +1,8 @@
 """Run one episode through the official ContextBench runner and write the run directory.
 
 Layout follows `docs/log_schema.md`: ContextBench writes `context_snapshots/`, `result.json` and
-`interactive_stream.json`; we add `episode.json`, `calls.jsonl` and `score.json` (Track 1 scorer).
+`interactive_stream.json`; we add `episode.json`, `calls.jsonl`, `edits.jsonl` and `score.json`
+(Track 1 scorer).
 """
 
 import json
@@ -66,6 +67,7 @@ def run_episode(
         "precision": precision,
         "budget": BUDGET,
         "reserve": RESERVE,
+        "manager_trigger_o200k": getattr(agent, "trigger", None),
         "served_max_len": served_max_len,
         "prompt_version": prompt_version,
         "sampling": agent.sampling.__dict__,
@@ -80,6 +82,9 @@ def run_episode(
     with (out / "calls.jsonl").open("w", encoding="utf-8") as handle:
         for call in agent.calls:
             handle.write(json.dumps(call) + "\n")
+    with (out / "edits.jsonl").open("w", encoding="utf-8") as handle:
+        for edit in getattr(agent, "edits", []):
+            handle.write(json.dumps(edit) + "\n")
 
     score = None
     if any((out / "context_snapshots").glob("turn-*.json")):

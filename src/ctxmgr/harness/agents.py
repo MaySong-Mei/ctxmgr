@@ -1,15 +1,18 @@
 """Agents implementing ContextBench's runner protocol on an OpenAI-compatible (vLLM) server.
 
-Only the no-management condition lives here so far: it is the baseline every other condition is
-compared against, and it needs no edit tools. CLM self-management and peer managers (Track 2) should
-subclass `ChatAgent` and change only what happens to `self.messages` between turns.
+Conditions: `none` (append only), `self` (the actor edits its own context from inside its
+conversation) and `peer_same` / `peer_27b` (a separate manager session edits it). Both managed
+conditions share the edit protocol in `management.py` and trigger at the same context size.
 """
 
 import time
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 import openai
 from contextbench.tokens import count_tokens
+
+from . import management
 
 
 class ServerRejected(RuntimeError):
@@ -74,11 +77,12 @@ class ChatAgent:
     def before_turn(self) -> None:
         """Context management runs here, after the previous turn was snapshotted."""
 
-    def complete(self, messages: list[dict], *, role: str) -> str:
+    def complete(self, messages: list[dict], *, role: str, client=None, model=None) -> str:
+        client, model = client or self.client, model or self.model
         start = time.monotonic()
         try:
-            response = self.client.chat.completions.create(
-                model=self.model, messages=messages, **self.sampling.request_kwargs()
+            response = client.chat.completions.create(
+                model=model, messages=messages, **self.sampling.request_kwargs()
             )
         except openai.BadRequestError as error:
             raise ServerRejected(str(error)) from error
@@ -90,7 +94,7 @@ class ChatAgent:
             {
                 "turn": self.turn,
                 "role": role,
-                "model": self.model,
+                "model": model,
                 "prompt_tokens": usage.prompt_tokens,
                 "completion_tokens": usage.completion_tokens,
                 "prompt_tokens_o200k": count_tokens(messages)[0],
@@ -105,3 +109,82 @@ class ChatAgent:
 
 class NoManagementAgent(ChatAgent):
     """Condition `none`: append everything, never edit. Runs until the budget wall or the end."""
+
+
+@dataclass
+class ManagedAgent(ChatAgent):
+    """Runs the shared edit protocol before a turn once the context exceeds `trigger` o200k tokens.
+
+    The management exchange itself is never kept in the actor's context, so only the edits differ
+    between conditions.
+    """
+
+    editor: ClassVar[str] = "actor"
+    trigger: int = 18432  # 60% of the 30,720-token wall
+    edits: list[dict] = field(default_factory=list)
+
+    def reset(self, system: str, instruction: str) -> None:
+        super().reset(system, instruction)
+        self.edits = []
+
+    def before_turn(self) -> None:
+        before = count_tokens(self.messages)[0]
+        if before <= self.trigger:
+            return
+        reply = self.request_edits(before)
+        proposed, error = management.parse_edits(reply)
+        result = management.apply_edits(self.messages, proposed)
+        self.edits.append(
+            {
+                "turn": self.turn,
+                "editor": self.editor,
+                "trigger": "threshold",
+                "context_before_o200k": before,
+                "context_after_o200k": count_tokens(self.messages)[0],
+                "applied": result.applied,
+                "error": error or result.error,
+            }
+        )
+
+    def request_edits(self, size: int) -> str:
+        raise NotImplementedError
+
+
+@dataclass
+class SelfManagedAgent(ManagedAgent):
+    """Condition `self`: the actor is asked, inside its own conversation, to edit its context."""
+
+    editor = "actor"
+
+    def request_edits(self, size: int) -> str:
+        request = (
+            f"[CONTEXT MANAGEMENT] Your context is {size} tokens; the limit is {self.wall}.\n"
+            f"{management.EDIT_INSTRUCTIONS}\n\nBlocks:\n{management.index(self.messages)}"
+        )
+        return self.complete(
+            [*self.messages, {"role": "user", "content": request}], role="self_manager"
+        )
+
+
+@dataclass
+class PeerManagedAgent(ManagedAgent):
+    """Conditions `peer_same` / `peer_27b`: a separate manager session reads and edits the context."""
+
+    manager_client: openai.OpenAI | None = None
+    manager_model: str | None = None
+    editor = "manager"
+
+    def request_edits(self, size: int) -> str:
+        request = (
+            f"Context of the assistant ({size} tokens; limit {self.wall}):\n\n"
+            f"{management.render(self.messages)}\n\n{management.EDIT_INSTRUCTIONS}"
+        )
+        return self.complete(
+            [
+                {"role": "system", "content": management.PEER_SYSTEM},
+                {"role": "user", "content": request},
+            ],
+            role="manager",
+            client=self.manager_client,
+            model=self.manager_model,
+        )

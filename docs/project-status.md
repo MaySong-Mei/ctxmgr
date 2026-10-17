@@ -18,8 +18,25 @@ ContextBench runner protocol on vLLM's OpenAI API and the no-management conditio
 temperature 0, max_tokens 2048); `run_episode` writes `episode.json`, `calls.jsonl` and `score.json`
 next to ContextBench's snapshots, as drafted in `docs/log_schema.md` on `may/track3-infra`;
 `slurm/baseline_smoke.sbatch` serves one model (`max_len` 40960 for Qwen/o200k headroom) and runs KV R130
-and Needle K4-C4 at seed 42. Self/peer management should subclass `ChatAgent` and act in
-`before_turn()`. Tested locally with a fake client only (28 tests pass); no real-model episode yet.
+and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (results in `CLAUDE.md` on
+`may/track3-infra`; issue #3).
+
+**Draft self/peer management (2026-10-17), to freeze with the team before comparison runs**
+(`src/ctxmgr/harness/management.py`, `agents.py`):
+- Shared action space for every managed condition: the context is numbered blocks; the editor replies
+  with one JSON object of `delete` / `replace` edits; blocks 0–1 (system prompt, task instruction) are
+  protected. Same edit instructions text for all conditions.
+- Trigger: before a turn, when the live context exceeds 18,432 o200k tokens (60% of the 30,720 wall).
+- `self`: the actor gets the edit request appended to its own conversation (it already holds the full
+  text, so it sees block ids with short previews). `peer_same` / `peer_27b`: a separate manager session
+  with its own system prompt gets the whole context rendered as numbered blocks. `peer_same` uses the
+  actor's server as a separate session.
+- The management exchange is never kept in the actor's context; manager calls are logged with role
+  `self_manager` / `manager` in `calls.jsonl`, and edits (sizes before/after, applied ops, parse errors)
+  in `edits.jsonl`. Malformed edit replies apply nothing and are logged.
+- Open: trigger value; whether self should see full text instead of previews; whether `replace` may
+  rewrite user operations; manager output budget (currently the same 2,048 max_tokens).
+Tested with fake clients only (33 tests pass).
 
 ## Immediate handoffs
 
