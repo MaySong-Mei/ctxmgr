@@ -25,9 +25,11 @@ SIZES="${SIZES:-0.8B 2B 4B 9B}"
 QUANT="${QUANT:-Q8_0}"
 LEVELS="${LEVELS:-kv_store:R130 kv_store:R1000 kv_store:R2000 needle_retention:K4-C4 needle_retention:K4-C24 needle_retention:K8-C48}"
 SEEDS="${SEEDS:-42 43 44 45}"
-# The benchmark budget is 32,768 o200k tokens; Qwen needs 1.22-1.40x as many tokens for the same
-# text, so serve with headroom and let ContextBench's o200k wall decide when an episode ends.
-CTX="${CTX:-49152}"
+# The benchmark budget is 32,768 o200k tokens, and ContextBench's o200k wall should end episodes, not
+# the server. Qwen needs 1.24x as many tokens on KV but up to 1.78x on Needle when a small model
+# echoes digit-heavy text (2B, job 29904662: rejected at 47.6K Qwen = 27.4K o200k with ctx 49,152).
+# 1.78 x 32,768 + 2,048 reply = 60.4K, so serve 80K for margin.
+CTX="${CTX:-81920}"
 PORT=$((20000 + SLURM_JOB_ID % 10000))
 J="${SLURM_JOB_ID}"
 RUNS="${PROJECT_DIR}/runs/baseline-gguf-${J}"
