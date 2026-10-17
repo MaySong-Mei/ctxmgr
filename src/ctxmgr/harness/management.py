@@ -12,9 +12,12 @@ Validation rules (from the first managed pilot on 2B/4B):
   a wipe of every editable block.
 - A delete takes either an id list or an inclusive range ("from"/"to"), not both, so long id lists
   don't run into the manager's output-token cap.
-- An edit without "op" that has an integer "id" and a string "text" is read as a replace (4B wrote
-  replaces this way). Any other edit without a known op is rejected.
+- A missing "op" is inferred when the fields are unambiguous: "id" + "text" is a replace (4B wrote
+  replaces this way), "ids" or "from"/"to" without "text" is a delete. Inferred edits carry
+  `"inferred_op": true` in the log, so protocol slips stay countable. Anything else is rejected.
 - Edits are validated independently: one rejected edit doesn't block the others.
+- Conflicts within one reply: a block that is both replaced and deleted is kept with its replacement
+  (the delete skips it), and a block replaced twice keeps the last text; both are reported.
 """
 
 import json
@@ -87,23 +90,27 @@ def _delete_ids(edit: dict, size: int) -> tuple[list[int] | None, str | None]:
         return None, f"delete needs 'ids' or 'from'/'to' {str(edit)[:80]}"
     if has_range:
         first, last = edit.get("from"), edit.get("to")
-        if not (_is_id(first) and _is_id(last)) or first > last:
+        if not all(_is_id(i) and i >= 0 for i in (first, last)) or first > last:
             return None, f"bad delete range {str(first)[:20]}..{str(last)[:20]}"
-        # Check the endpoints before expanding: a huge "to" must not build a huge list.
-        if first < PROTECTED:
-            return None, f"delete names protected blocks {str(edit)[:80]}"
-        if last >= size:
-            return None, f"delete names missing blocks {str(edit)[:80]}"
-        ids = list(range(first, last + 1))
     else:
         ids = edit["ids"]
-        if not isinstance(ids, list) or not ids or not all(_is_id(i) for i in ids):
+        if not isinstance(ids, list) or not ids or not all(_is_id(i) and i >= 0 for i in ids):
             return None, f"bad delete ids {str(ids)[:80]}"
-    if min(ids) < PROTECTED:
+        first, last = min(ids), max(ids)
+    # Check the endpoints before expanding a range: a huge "to" must not build a huge list.
+    if first < PROTECTED:
         return None, f"delete names protected blocks {str(edit)[:80]}"
-    if max(ids) >= size:
+    if last >= size:
         return None, f"delete names missing blocks {str(edit)[:80]}"
-    return sorted(set(ids)), None
+    return (list(range(first, last + 1)) if has_range else sorted(set(edit["ids"]))), None
+
+
+def _infer_op(edit: dict) -> str | None:
+    if _is_id(edit.get("id")) and "text" in edit:
+        return "replace"
+    if ("ids" in edit or "from" in edit or "to" in edit) and "text" not in edit:
+        return "delete"
+    return None
 
 
 def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
@@ -111,24 +118,38 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
     deletes, replaces, applied, problems = set(), {}, [], []
     for edit in edits:
         op = edit.get("op") if isinstance(edit, dict) else None
-        if op is None and isinstance(edit, dict) and _is_id(edit.get("id")) and "text" in edit:
-            op = "replace"  # 4B omitted "op" on replaces; id + text is unambiguous
+        inferred = op is None and isinstance(edit, dict) and _infer_op(edit) is not None
+        if inferred:
+            op = _infer_op(edit)
+        flag = {"inferred_op": True} if inferred else {}
         if op == "delete":
             ids, problem = _delete_ids(edit, len(messages))
             if problem:
                 problems.append(problem)
             else:
                 deletes.update(ids)
-                applied.append({"op": "delete", "ids": ids})
+                applied.append({"op": "delete", "ids": ids, **flag})
         elif op == "replace" and isinstance(edit.get("text"), str):
             i = edit.get("id")
             if _is_id(i) and PROTECTED <= i < len(messages):
+                if i in replaces:
+                    problems.append(f"block {i} replaced twice; kept the last text")
+                    applied = [a for a in applied if not (a["op"] == "replace" and a["id"] == i)]
                 replaces[i] = edit["text"]
-                applied.append({"op": "replace", "id": i, "chars": len(edit["text"])})
+                applied.append({"op": "replace", "id": i, "chars": len(edit["text"]), **flag})
             else:
                 problems.append(f"bad replace id {i}")
         else:
             problems.append(f"unknown edit {str(edit)[:80]}")
+    # A replacement is a deliberate "keep this": a delete in the same reply skips that block.
+    conflicts = deletes & replaces.keys()
+    if conflicts:
+        deletes -= conflicts
+        problems.append(f"kept replaced blocks {sorted(conflicts)} that a delete also named")
+        for a in applied:
+            if a["op"] == "delete":
+                a["ids"] = [i for i in a["ids"] if i not in conflicts]
+        applied = [a for a in applied if a["op"] != "delete" or a["ids"]]
     kept = []
     for i, m in enumerate(messages):
         if i in deletes:

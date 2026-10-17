@@ -143,11 +143,58 @@ def test_edit_with_id_and_text_but_no_op_is_a_replace():
     messages = blocks(2)
     result = management.apply_edits(messages, [{"id": 3, "text": "summary"}])
     assert contents(messages) == ["0", "1", "2", "summary"]
-    assert result.applied == [{"op": "replace", "id": 3, "chars": 7}] and result.error is None
+    assert result.applied == [{"op": "replace", "id": 3, "chars": 7, "inferred_op": True}]
+    assert result.error is None
     # Still subject to the same checks as an explicit replace.
-    result = management.apply_edits(messages, [{"id": 0, "text": "x"}, {"ids": [2]}])
+    result = management.apply_edits(messages, [{"id": 0, "text": "x"}, {"foo": [2]}])
     assert contents(messages) == ["0", "1", "2", "summary"]
     assert "bad replace id 0" in result.error and "unknown edit" in result.error
+
+
+def test_edit_with_ids_or_range_but_no_op_is_a_delete_and_marked():
+    messages = blocks(6)
+    result = management.apply_edits(messages, [{"ids": [2]}, {"from": 4, "to": 5}])
+    assert contents(messages) == ["0", "1", "3", "6", "7"]
+    assert result.applied == [
+        {"op": "delete", "ids": [2], "inferred_op": True},
+        {"op": "delete", "ids": [4, 5], "inferred_op": True},
+    ]
+    # Explicit ops are not marked.
+    result = management.apply_edits(messages, [{"op": "delete", "ids": [2]}])
+    assert result.applied == [{"op": "delete", "ids": [2]}]
+
+
+def test_replace_wins_over_delete_of_the_same_block():
+    # e.g. "replace 5 with the needle lines, then delete 2..7": the needles must survive.
+    messages = blocks(8)
+    result = management.apply_edits(
+        messages,
+        [{"op": "replace", "id": 5, "text": "needles"}, {"op": "delete", "from": 2, "to": 7}],
+    )
+    assert contents(messages) == ["0", "1", "needles", "8", "9"]
+    assert result.applied == [
+        {"op": "replace", "id": 5, "chars": 7},
+        {"op": "delete", "ids": [2, 3, 4, 6, 7]},
+    ]
+    assert "kept replaced blocks [5]" in result.error
+
+
+def test_replacing_a_block_twice_keeps_the_last_and_logs_once():
+    messages = blocks(2)
+    result = management.apply_edits(
+        messages,
+        [{"op": "replace", "id": 2, "text": "a"}, {"op": "replace", "id": 2, "text": "bb"}],
+    )
+    assert contents(messages) == ["0", "1", "bb", "3"]
+    assert result.applied == [{"op": "replace", "id": 2, "chars": 2}]
+    assert "replaced twice" in result.error
+
+
+def test_negative_ids_are_invalid_not_protected():
+    messages = blocks(4)
+    for edit in ({"op": "delete", "ids": [-1]}, {"op": "delete", "from": -1, "to": 3}):
+        result = management.apply_edits(messages, [edit])
+        assert result.applied == [] and "bad delete" in result.error
 
 
 def test_instructions_offer_ranges():

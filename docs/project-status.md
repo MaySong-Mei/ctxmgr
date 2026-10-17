@@ -34,10 +34,15 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
     edit is rejected and reported in `error`. Before, the bad ids were dropped and the rest applied,
     which turned 2B's "delete 0..N" into a wipe of every editable block. Range endpoints are checked
     before the range is expanded.
-  - `{"op": "replace", "id": i, "text": "..."}` rewrites one block. An edit with an integer `id` and a
-    string `text` but no `op` is read as a replace (4B wrote replaces this way), with the same id
-    checks. Any other edit without a known `op` is rejected.
+  - `{"op": "replace", "id": i, "text": "..."}` rewrites one block.
+  - A missing `op` is inferred when unambiguous: `id` + `text` → replace (4B wrote replaces this way),
+    `ids` or `from`/`to` without `text` → delete, with the same checks. Inferred edits are logged with
+    `"inferred_op": true` so protocol slips stay countable (issue #3). Anything else is rejected.
+  - Negative ids are invalid (reported as bad ids, not as protected blocks).
   - Edits in one reply are checked independently: a rejected edit doesn't block the others.
+  - Conflicts in one reply: a block both replaced and deleted keeps its replacement (the delete skips
+    it); a block replaced twice keeps the last text. Both are reported in `error`, and `applied` lists
+    only what took effect.
 - Trigger: before a turn, when the live context exceeds 18,432 o200k tokens (60% of the 30,720 wall).
 - `self`: the actor gets the edit request appended to its own conversation (it already holds the full
   text, so it sees block ids with short previews). `peer_same` / `peer_27b`: a separate manager session
@@ -52,8 +57,8 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
   can still hit it); KV R1000 has no way to keep values while dropping SET-BATCH blocks.
 - First managed pilot (2B/4B, 2026-10-17) ran on the pre-hardening protocol; results in `CLAUDE.md` on
   `may/track3-infra`.
-Tested with fake clients only: `uv run pytest -q` 39 passed, `ruff check .` and `ruff format --check` clean (Bouchet CPU node,
-2026-10-17).
+Tested with fake clients only: `uv run pytest -q` 43 passed, Ruff check/format clean (local, after the
+PR #4 review fixes, 2026-10-17; 39 passed on a Bouchet CPU node before them).
 
 ## Immediate handoffs
 
