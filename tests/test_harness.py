@@ -93,3 +93,18 @@ def test_server_rejection_is_recorded_not_raised(tmp_path):
     assert episode["terminated_by"] == "server_rejected"
     assert "prompt too long" in episode["error"]
     assert outcome["score"] is not None  # the one completed turn is still scored
+
+
+def test_turn_past_the_wall_is_not_sent_to_the_server(tmp_path):
+    instance = tmp_path / "instance"
+    generate_instance("needle_retention", "K4-C24", 42, instance)
+    completions = FakeCompletions()
+    out = tmp_path / "run"
+    outcome = run_episode(fake_agent(completions), instance, out, condition="none")
+
+    assert outcome["episode"]["terminated_by"] == "budget_wall"
+    result = json.loads((out / "result.json").read_text())
+    # Every turn but the wall-crossing one reached the server, and none was over the wall.
+    assert len(completions.requests) == result["n_turns"] - 1
+    calls = [json.loads(line) for line in (out / "calls.jsonl").read_text().splitlines()]
+    assert max(c["prompt_tokens_o200k"] for c in calls) <= 32768 - 2048

@@ -46,6 +46,7 @@ def run_episode(
     validate_instance(instance_dir)
     manifest = json.loads((instance_dir / "manifest.json").read_text(encoding="utf-8"))
 
+    agent.wall = BUDGET - RESERVE
     terminated_by, error = None, None
     try:
         result = run(agent, instance_dir, budget=BUDGET, reserve=RESERVE, out_dir=out)

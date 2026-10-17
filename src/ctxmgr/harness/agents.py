@@ -43,6 +43,9 @@ class ChatAgent:
     messages: list[dict] = field(default_factory=list)
     calls: list[dict] = field(default_factory=list)
     turn: int = 0
+    # o200k wall (budget - reserve). A turn whose input already crosses it is not sent: the runner
+    # ends the episode on `budget_wall` anyway, and the server might reject the oversized prompt.
+    wall: int | None = None
 
     # --- ContextBench runner protocol -------------------------------------------------------------
     def reset(self, system: str, instruction: str) -> None:
@@ -58,6 +61,8 @@ class ChatAgent:
         self.before_turn()
         # The runner's invariant: the operation enters the context intact before the model acts.
         self.messages.append({"role": "user", "content": text})
+        if self.wall is not None and count_tokens(self.messages)[0] > self.wall:
+            return ""
         reply = self.complete(self.messages, role=self.role)
         self.messages.append({"role": "assistant", "content": reply})
         return reply
