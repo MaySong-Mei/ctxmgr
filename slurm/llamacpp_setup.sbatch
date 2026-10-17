@@ -5,7 +5,7 @@
 #SBATCH --job-name=ctxmgr-llamacpp-setup
 #SBATCH --partition=education
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --time=03:00:00
 #SBATCH --output=logs/%x-%j.out
 
@@ -37,11 +37,14 @@ fi
 ls "${LLAMA_BIN}" | head -40
 
 # Manager candidates (Q6_K first, Q5_K_M fallback) and Q8_0 actors. Text only: no mmproj.
-uvx --from huggingface_hub hf download unsloth/Qwen3.5-27B-GGUF \
-    Qwen3.5-27B-Q6_K.gguf Qwen3.5-27B-Q5_K_M.gguf --local-dir "${GGUF_DIR}/Qwen3.5-27B"
+# One file per call over plain HTTP: hf-xet fetching two 20 GB files at once peaked above 16 GB RSS
+# and was OOM-killed (job 29901625).
+export HF_HUB_DISABLE_XET=1
+fetch() { uvx --from huggingface_hub hf download "$1" "$2" --local-dir "${GGUF_DIR}/$3"; }
+fetch unsloth/Qwen3.5-27B-GGUF Qwen3.5-27B-Q6_K.gguf Qwen3.5-27B
+fetch unsloth/Qwen3.5-27B-GGUF Qwen3.5-27B-Q5_K_M.gguf Qwen3.5-27B
 for size in 9B 4B; do
-    uvx --from huggingface_hub hf download "unsloth/Qwen3.5-${size}-GGUF" \
-        "Qwen3.5-${size}-Q8_0.gguf" --local-dir "${GGUF_DIR}/Qwen3.5-${size}"
+    fetch "unsloth/Qwen3.5-${size}-GGUF" "Qwen3.5-${size}-Q8_0.gguf" "Qwen3.5-${size}"
 done
 du -sh "${GGUF_DIR}"/* || true
 df -h "${PROJECT_DIR}" || true
