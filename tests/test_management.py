@@ -113,6 +113,7 @@ def test_delete_with_missing_or_malformed_ids_is_rejected_whole():
         {"op": "delete", "ids": []},
         {"op": "delete", "from": 4, "to": 3},
         {"op": "delete", "from": 2, "to": 9},
+        {"op": "delete", "from": 2, "to": 10**30},  # must not expand the range first
         {"op": "delete", "ids": [3], "from": 2, "to": 3},
         {"op": "delete"},
     ):

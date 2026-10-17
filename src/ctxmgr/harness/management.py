@@ -88,7 +88,12 @@ def _delete_ids(edit: dict, size: int) -> tuple[list[int] | None, str | None]:
     if has_range:
         first, last = edit.get("from"), edit.get("to")
         if not (_is_id(first) and _is_id(last)) or first > last:
-            return None, f"bad delete range {first}..{last}"
+            return None, f"bad delete range {str(first)[:20]}..{str(last)[:20]}"
+        # Check the endpoints before expanding: a huge "to" must not build a huge list.
+        if first < PROTECTED:
+            return None, f"delete names protected blocks {str(edit)[:80]}"
+        if last >= size:
+            return None, f"delete names missing blocks {str(edit)[:80]}"
         ids = list(range(first, last + 1))
     else:
         ids = edit["ids"]
