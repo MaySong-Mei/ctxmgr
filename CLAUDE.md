@@ -79,6 +79,15 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   CUTLASS w8a8 kernel, which errors on Ampere (`cutlass_scaled_mm_sm80_epilogue`); the 27B checkpoint
   works because it gets Marlin. 9B-FP8 weights are 10.4 GiB, above the 0.21 share (~9.4 GiB) anyway.
   So on one A40 only 2B (and presumably 0.8B) can sit beside the 27B manager at 32K.
+- First end-to-end baseline (2026-10-16, `slurm/baseline_smoke.sbatch` on `may/track2-baseline` d94f74a,
+  2B bf16, condition none, seed 42, max_len 40,960, thinking off, temp 0; landed on an RTX 5000 Ada since
+  `--gpus=1` does not pin a type): job COMPLETED in 10 min (vLLM startup ~2.5 min). KV R130: ran all
+  50 turns, official reward 1.0 (24/24), peak 10.5K o200k. Strict exact accuracy 0.0 only because 2B
+  writes a stray `>` after the ANSWER tag, so every value starts with "> " (official grader matches by
+  substring). Needle K4-C4: cut off at turn 9 by vLLM (`server_rejected`: 38,913 Qwen prompt tokens +
+  2,048 max_tokens > 40,960) while still under the o200k budget (peak 24.6K), so its 0.75 (12/16) is
+  not a full-episode score. Qwen/o200k ratio: 1.25 on KV, 1.40 on Needle. 2B often hit the 2,048-token
+  completion cap on Needle. Runs are under `runs/baseline-<job>` in the project dir (not in git).
 
 ## Dev
 
@@ -102,7 +111,10 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
 - Manager scope: the peer manager may only edit context (same edit tools as self-management), never
   answer the task or add reasoning, or task skill leaks into the peer conditions.
 - Served context length: the 32K budget is in o200k tokens, but vLLM `max_len` counts Qwen tokens, which
-  can be more for the same text. Measure Qwen/o200k ratio on real episodes; `max_len` = 32,768 (as in the
-  pilots) may need headroom, which changes KV memory and co-location fit.
+  can be more for the same text. Measured ratio 1.25 (KV) to 1.40 (Needle) on the 2B baseline, and
+  40,960 was too small for Needle. Covering the full 30,720-token o200k context at 1.40 plus a 2,048
+  completion needs ~45K, so `max_len` 49,152 is the candidate; this shrinks KV memory and co-location fit.
+- Strict KV diagnostic (Track 1): exact match fails on formatting like a stray `>` after the ANSWER tag
+  (0/24 strict vs 24/24 official on the 2B baseline). Decide whether strict should strip such tag debris.
 - Context-management logging from the first run (draft in `docs/log_schema.md`): per-call usage by role,
   edits, triggers, termination, on top of ContextBench snapshots.

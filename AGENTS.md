@@ -72,6 +72,10 @@ Known quirks:
   smoke-tested (results in `CLAUDE.md`); English pilot report written for the team (Claude Docs).
   27B-FP8 downloaded and smoke-tested on the A40 (`a40_27b.sbatch` re-run): 27B alone and 27B + 2B
   co-located pass; 27B + 4B does not fit; 9B online FP8 fails on Ampere (details in `CLAUDE.md`).
+  First end-to-end no-management baseline (2B, KV R130 + Needle K4-C4) ran from `may/track2-baseline`;
+  Needle was cut off by vLLM `max_len` 40,960 (details in `CLAUDE.md`).
+- The cluster has a second worktree, `.../ctxmgr-baseline` on `may/track2-baseline`, with its own venv;
+  the main clone stays on `may/track3-infra`. Pin a GPU type (`--gpus=a5000:1` etc.) for comparable runs.
 - vLLM gotchas for Qwen3.5 (hybrid attention): set `--max-num-seqs` at or below the Mamba state
   blocks the log reports. Online `--quantization fp8` is unusable on the A40 with vLLM 0.30
   (torch.compile crash; with `--enforce-eager`, CUTLASS sm80 kernel error). Offline FP8 checkpoints
