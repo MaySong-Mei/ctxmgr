@@ -94,6 +94,43 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   `snapshot_budget_exceeded` is true). Official reward 1.0 (16/16), required-info loss 0, strict
   verbatim retention 1.0. Max Qwen prompt 42,076 + 2,048 completion fits 49,152; ratio 1.37–1.40.
   8 of 11 completions hit the 2,048 cap (`finish_reason=length`). KV cache at 49,152: 1.90M tokens.
+- No-management scaling baseline (2026-10-17, job on `may/track2-baseline` baddbbf, one A5000 job for
+  0.8B/2B/4B, bf16, temp 0, thinking off, max_tokens 2,048, seed 42, `MAX_LEN=49152`; 19.6 min total).
+  All three servers started (4B: 8.0 GiB weights, KV 356K tokens = 7.2× 49K). Ratio = max Qwen/o200k.
+
+  | model | level | end | turns | reward | diagnostic | peak o200k | capped | ratio |
+  |---|---|---|---|---|---|---|---|---|
+  | 0.8B | KV R130 | budget_wall | 286 | 0.00 (0/24) | strict 0.00 | 30,722 | 0 | 1.22 |
+  | 0.8B | Needle K4-C4 | stream_exhausted | 4 | 1.00 (16/16) | loss 0.00 | 16,446 | 0 | 1.40 |
+  | 0.8B | KV R1000 | budget_wall | 7 | 0.00 (0/24) | strict 0.00 | 34,912 | 0 | 1.24 |
+  | 0.8B | Needle K4-C24 | budget_wall | 8 | 0.33 (32/96) | loss 0.67 | 32,409 | 0 | 1.40 |
+  | 2B | KV R130 | stream_exhausted | 50 | 1.00 (24/24) | strict 0.00 | 10,512 | 0 | 1.25 |
+  | 2B | Needle K4-C4 | budget_wall | 14 | 1.00 (16/16) | loss 0.00 | 31,546 | 8 | 1.40 |
+  | 2B | KV R1000 | budget_wall | 7 | 0.00 (0/24) | strict 0.00 | 34,912 | 0 | 1.24 |
+  | 2B | Needle K4-C24 | budget_wall | 8 | 0.33 (32/96) | loss 0.67 | 33,367 | 0 | 1.40 |
+  | 4B | KV R130 | submit | 26 | 0.00 (0/24) | strict 0.00 | 9,533 | 0 | 1.24 |
+  | 4B | Needle K4-C4 | submit | 4 | 1.00 (16/16) | loss 0.00 | 17,230 | 0 | 1.39 |
+  | 4B | KV R1000 | budget_wall | 7 | 0.00 (0/24) | strict 0.00 | 35,220 | 0 | 1.24 |
+  | 4B | Needle K4-C24 | server_rejected | 7 | 0.29 (28/96) | loss 0.71 | 29,728 | 0 | 1.40 |
+
+  Reading (from `scripts/inspect_completions.py` and the final snapshots):
+  - Scores mostly reflect output format, not memory. 0.8B KV R130 wrote a malformed ANSWER
+    (`key=00122>>>>`, no END tag, no `#hash`) and never `READY_FOR_NEXT_OP`, so the stream never
+    advanced; it repeated the same reply ~280 times until the wall. 4B KV R130 wrote well-formed
+    blocks but dropped the `#hash` suffix of every value (official needs it as a substring), then
+    submitted after 26 of 50 turns. 2B keeps the hash but adds a stray `>`.
+  - Echoing: 2B copies the NEEDLES block verbatim into its replies (and on K4-C4 echoes until the
+    2,048 cap); 4B restates the needles as a numbered list and claims to delete filler it cannot
+    delete; 0.8B replies only `READY_FOR_NEXT_OP` (no echo). Since Needle is graded from the final
+    context, echoes in replies count as retention for no-management.
+  - KV R1000 and Needle K4-C24 overflow the budget within 7–8 turns for every size, as expected
+    without management (KV 0, Needle ~0.3).
+  - 4B Needle K4-C24 hit `server_rejected` (47,105 Qwen prompt + 2,048 > 49,152): the harness sends
+    the turn that crosses the o200k wall to the server (peaks up to 35.2K o200k ≈ 49K Qwen), so either
+    check the wall before the call (Track 2) or serve ~53K.
+  - 2B KV R130 reproduces the RTX 5000 Ada run exactly; 2B Needle K4-C4 does not (14 turns vs 11):
+    temp 0 is not bitwise deterministic across GPU types, so keep one GPU type per comparison.
+  - The vLLM ERROR lines in the 0.8B log are shutdown noise when the server is stopped between models.
 
 ## Dev
 
