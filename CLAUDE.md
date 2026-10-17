@@ -171,6 +171,27 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     or give the manager more than 2,048 output tokens; KV R1000 needs a way to keep values while
     dropping SET-BATCH blocks (the actor never printed ANSWER blocks before the wall).
   - 2B log has the usual 8 shutdown ERROR lines; 4B none. KV caches: 2B 1.39M, 4B 387K tokens.
+- peer_27b pilot (2026-10-17, `slurm/peer27b_pilot.sbatch` on `may/track2-baseline` 8b4cd8a = hardened
+  protocol from PR #4; A40, 27B-FP8 manager + 2B actor co-located, Needle K4-C24, seed 42, trigger
+  18,432, `MAX_LEN=49152`, 7.9 min). First attempt failed: at util 0.75 the 27B has 2.37 GiB KV, below
+  the 3.3 GiB one 49,152-token request needs; `BIG_UTIL=0.79 ACTOR_UTIL=0.17` works.
+
+  | cond | end | turns | reward | loss | peak o200k | events → applied | tokens actor · manager |
+  |---|---|---|---|---|---|---|---|
+  | none | budget_wall | 7 | 0.33 | 0.67 | 33,245 | – | 166K · – |
+  | self | budget_wall | 7 | 0.33 | 0.67 | 33,245 | 3 → 0 | 166K · 108K |
+  | peer_same | budget_wall | 7 | 0.33 | 0.67 | 33,245 | 3 → 0 | 166K · 107K |
+  | peer_27b | stream_exhausted | 24 | 0.17 | 0.83 | 21,121 | 4 → 4 | 416K · 120K |
+
+  - Hardening worked as intended for 2B: its "delete 0..N" edits are now rejected whole (protected ids),
+    so self / peer_same no longer wipe the context; they change nothing and end exactly like none.
+  - 27B writes well-formed edits but uses them to wipe: all four events were `delete from 2 to 11`
+    (every editable block, needles included), 21K → 0.6K o200k each time. The episode now finishes the
+    stream (24 turns, never hits the wall) but only the needles delivered after the last wipe survive,
+    so the reward halves. Once it also tried to rewrite protected block 1 (the task instruction).
+  - So a 27B manager is not enough under this protocol: it frees space but does not keep what the task
+    needs. Candidate causes to test: the manager prompt never states the task goal beyond block 1;
+    "free space" is the only explicit objective; no feedback on what was lost.
 
 ## Dev
 
