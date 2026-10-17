@@ -200,8 +200,7 @@ def test_self_management_exchange_stays_out_of_the_context(tmp_path):
     edits = [json.loads(line) for line in (out / "edits.jsonl").read_text().splitlines()]
     assert edits and all(e["editor"] == "actor" for e in edits)
     # The raw manager reply is logged next to the parsed edits.
-    assert all(e["reply"].startswith("Sure:
-{") for e in edits)
+    assert all(e["reply"].startswith("Sure:\n{") for e in edits)
     for path in sorted((out / "context_snapshots").glob("turn-*.json")):
         messages = json.loads(path.read_text(encoding="utf-8"))["messages"]
         assert not any(m["content"].startswith("[CONTEXT MANAGEMENT]") for m in messages)
