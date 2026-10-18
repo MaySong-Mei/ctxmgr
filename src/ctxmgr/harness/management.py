@@ -16,12 +16,15 @@ Validation rules (from the managed pilots on 2B/4B and the 27B peer):
 - A missing "op" is inferred when the fields are unambiguous: "id" + "text" is a replace (4B wrote
   replaces this way), "ids" or "from"/"to" without "text" is a delete. Inferred edits carry
   `"inferred_op": true` in the log, so protocol slips stay countable. Anything else is invalid.
-- `note` writes the notes block: one block right after the task instruction that holds consolidated
-  content. It is created on first use and each note replaces it whole. It gives a manager a legal
-  place to gather what must be kept (27B otherwise tried to rewrite the protected instruction).
+- `note` appends to the notes block: one block right after the task instruction that holds
+  consolidated content, created on first use. It gives a manager a legal place to gather what must be
+  kept (27B otherwise tried to rewrite the protected instruction). Appending (v4) instead of rewriting
+  the whole block (v3) keeps a note's size proportional to the new content: in v3, rewriting 53+
+  needles hit the 2,048-token output cap and the cut-off reply was rejected. To prune notes, replace
+  the notes block by its id; it keeps its header and stays the notes block.
 - Conflicts within one valid reply are resolved, not rejected: a block both replaced and deleted is
-  kept with its replacement, a block replaced twice (or several notes) keeps the last text; both are
-  reported.
+  kept with its replacement, a block replaced twice keeps the last text; both are reported. Several
+  notes in one reply are appended in order.
 """
 
 import json
@@ -32,8 +35,9 @@ PROTECTED = 2  # system prompt + task instruction
 NOTES_HEADER = "[NOTES kept by context management]"
 
 # Bump when EDIT_INSTRUCTIONS or the edit semantics change; logged per episode.
-# v1 = first pilots; v2 = says what to keep; v3 = all-or-nothing replies + notes block.
-EDIT_PROMPT_VERSION = "edit-v3"
+# v1 = first pilots; v2 = says what to keep; v3 = all-or-nothing replies + notes block;
+# v4 = notes are append-only.
+EDIT_PROMPT_VERSION = "edit-v4"
 
 EDIT_INSTRUCTIONS = """\
 The context is shown as numbered blocks. It is close to its size limit, so free space by editing it.
@@ -49,8 +53,9 @@ Allowed edits (blocks 0 and 1 cannot be edited):
 - {"op": "delete", "ids": [<block ids>]} removes blocks.
 - {"op": "delete", "from": <first id>, "to": <last id>} removes a run of blocks (both ends included).
 - {"op": "replace", "id": <block id>, "text": "<new text>"} rewrites one block.
-- {"op": "note", "text": "<text>"} writes the notes block, kept right after block 1. Each note
-  replaces the whole notes block, so include everything from the old notes that is still needed.
+- {"op": "note", "text": "<text>"} appends text to the notes block, kept right after block 1 (it is
+  created on first use). Only write what is new; earlier notes stay. To prune the notes, replace the
+  notes block by its id.
 Your reply is applied as a whole: if any edit is invalid (e.g. it names block 0 or 1), none of your
 edits are applied. Do not answer the task here.
 Reply with only one JSON object: {"edits": [ ... ]}"""
@@ -138,7 +143,7 @@ def _is_notes(message: dict) -> bool:
 def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
     """Apply a reply's edits as one unit. Ids refer to the pre-edit numbering."""
     deletes, replaces, applied, rejected, warnings = set(), {}, [], [], []
-    note = None
+    notes = []
     for edit in edits:
         op = edit.get("op") if isinstance(edit, dict) else None
         inferred = op is None and isinstance(edit, dict) and _infer_op(edit) is not None
@@ -163,11 +168,8 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
             else:
                 rejected.append(f"bad replace id {i}")
         elif op == "note" and isinstance(edit.get("text"), str):
-            if note is not None:
-                warnings.append("several notes; kept the last")
-                applied = [a for a in applied if a["op"] != "note"]
-            note = edit["text"]
-            applied.append({"op": "note", "chars": len(note)})
+            notes.append(edit["text"])
+            applied.append({"op": "note", "chars": len(edit["text"])})
         else:
             rejected.append(f"unknown edit {str(edit)[:80]}")
     if rejected:
@@ -181,12 +183,26 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
             if a["op"] == "delete":
                 a["ids"] = [i for i in a["ids"] if i not in conflicts]
         applied = [a for a in applied if a["op"] != "delete" or a["ids"]]
-    kept = []
+    kept, notes_at = [], None
     for i, m in enumerate(messages):
-        if i in deletes or (note is not None and i >= PROTECTED and _is_notes(m)):
+        if i in deletes:
             continue
-        kept.append({**m, "content": replaces[i]} if i in replaces else m)
-    if note is not None:
-        kept.insert(PROTECTED, {"role": "user", "content": f"{NOTES_HEADER}\n{note}"})
+        is_notes = i >= PROTECTED and _is_notes(m)
+        if i in replaces:
+            text = replaces[i]
+            # Replacing the notes block prunes it; it stays the notes block.
+            if is_notes and not text.startswith(NOTES_HEADER):
+                text = f"{NOTES_HEADER}\n{text}"
+            m = {**m, "content": text}
+        if is_notes and notes_at is None:
+            notes_at = len(kept)
+        kept.append(m)
+    if notes:
+        added = "\n".join(notes)
+        if notes_at is None:
+            kept.insert(PROTECTED, {"role": "user", "content": f"{NOTES_HEADER}\n{added}"})
+        else:
+            block = kept[notes_at]
+            kept[notes_at] = {**block, "content": f"{block['content']}\n{added}"}
     messages[:] = kept
     return EditResult(applied, "; ".join(warnings) or None)

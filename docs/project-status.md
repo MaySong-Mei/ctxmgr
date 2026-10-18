@@ -42,12 +42,14 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
   - **edit-v3 (2026-10-17): a reply is all-or-nothing.** If any edit in it is invalid, none is applied
     (`error` starts with "rejected whole reply"). Was: edits checked independently, which in the
     27B pilot applied "delete 2–11" while rejecting the paired "copy the needles into block 1".
-  - **edit-v3: `{"op": "note", "text": ...}`** writes a notes block kept right after block 1 (created on
-    first use, replaced whole by each note), a legal place to consolidate what must be kept.
+  - **`{"op": "note", "text": ...}`** writes to a notes block kept right after block 1 (created on
+    first use), a legal place to consolidate what must be kept (edit-v3). **edit-v4: notes append**;
+    in v3 each note rewrote the whole block, and once it held 53+ needles the rewrite hit the 2,048
+    output cap and was rejected. Replacing the notes block by id prunes it (it keeps its header).
   - Conflicts in a valid reply are resolved, not rejected: a block both replaced and deleted keeps its
     replacement; a block replaced twice (or several notes) keeps the last text. Both are reported in
     `error`, and `applied` lists only what took effect.
-  - `EDIT_PROMPT_VERSION` (now `edit-v3`) is logged in `episode.json` for every managed episode.
+  - `EDIT_PROMPT_VERSION` (now `edit-v4`) is logged in `episode.json` for every managed episode.
 - Trigger: before a turn, when the live context exceeds 18,432 o200k tokens (60% of the 30,720 wall).
 - `self`: the actor gets the edit request appended to its own conversation (it already holds the full
   text, so it sees block ids with short previews). `peer_same` / `peer_27b`: a separate manager session
@@ -62,8 +64,8 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
   can still hit it); KV R1000 has no way to keep values while dropping SET-BATCH blocks.
 - First managed pilot (2B/4B, 2026-10-17) ran on the pre-hardening protocol; results in `CLAUDE.md` on
   `may/track3-infra`.
-Tested with fake clients only: `uv run pytest -q` 48 passed, Ruff check/format clean (local, edit-v3,
-2026-10-17).
+Tested with fake clients only: `uv run pytest -q` 50 passed, Ruff check/format clean (local, edit-v4,
+2026-10-18).
 
 ## Immediate handoffs
 

@@ -147,7 +147,7 @@ def test_27b_consolidation_into_block_1_does_not_lose_the_deleted_blocks():
     assert "bad replace id 1" in result.error
 
 
-def test_note_creates_then_replaces_the_notes_block_after_the_instruction():
+def test_note_creates_then_appends_to_the_notes_block_after_the_instruction():
     messages = blocks(4)
     result = management.apply_edits(
         messages, [{"op": "note", "text": "n1"}, {"op": "delete", "from": 2, "to": 5}]
@@ -156,16 +156,37 @@ def test_note_creates_then_replaces_the_notes_block_after_the_instruction():
     assert contents(messages) == ["0", "1", f"{header}\nn1"]
     assert result.applied == [{"op": "note", "chars": 2}, {"op": "delete", "ids": [2, 3, 4, 5]}]
     messages += [{"role": "user", "content": "6"}]
-    management.apply_edits(messages, [{"op": "note", "text": "n1 n2"}])
-    assert contents(messages) == ["0", "1", f"{header}\nn1 n2", "6"]
+    # v4: a later note only carries the new content and is appended.
+    result = management.apply_edits(
+        messages, [{"op": "note", "text": "n2"}, {"op": "delete", "ids": [3]}]
+    )
+    assert contents(messages) == ["0", "1", f"{header}\nn1\nn2"]
+    assert result.error is None
 
 
-def test_several_notes_keep_the_last():
+def test_several_notes_in_one_reply_are_appended_in_order():
     messages = blocks(2)
     edits = [{"op": "note", "text": "a"}, {"op": "note", "text": "b"}]
     result = management.apply_edits(messages, edits)
-    assert contents(messages)[2] == f"{management.NOTES_HEADER}\nb"
-    assert result.applied == [{"op": "note", "chars": 1}] and "several notes" in result.error
+    assert contents(messages)[2] == f"{management.NOTES_HEADER}\na\nb"
+    assert len(result.applied) == 2 and result.error is None
+
+
+def test_replacing_the_notes_block_prunes_it_and_keeps_it_the_notes_block():
+    messages = blocks(2)
+    management.apply_edits(messages, [{"op": "note", "text": "old\nkeep"}])
+    result = management.apply_edits(
+        messages, [{"op": "replace", "id": 2, "text": "keep"}, {"op": "note", "text": "new"}]
+    )
+    assert contents(messages)[2] == f"{management.NOTES_HEADER}\nkeep\nnew"
+    assert len(messages) == 5 and result.error is None
+
+
+def test_deleting_the_notes_block_then_noting_starts_fresh():
+    messages = blocks(2)
+    management.apply_edits(messages, [{"op": "note", "text": "old"}])
+    management.apply_edits(messages, [{"op": "delete", "ids": [2]}, {"op": "note", "text": "new"}])
+    assert contents(messages)[2] == f"{management.NOTES_HEADER}\nnew"
 
 
 def test_instructions_offer_notes_and_say_replies_are_atomic():
