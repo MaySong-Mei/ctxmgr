@@ -79,15 +79,25 @@ def contents(messages):
     return [m["content"] for m in messages]
 
 
-def test_apply_edits_applies_valid_edits_and_reports_unknown_ones():
+def test_valid_reply_applies_all_its_edits():
+    messages = blocks(2)
+    result = management.apply_edits(
+        messages, [{"op": "delete", "ids": [3]}, {"op": "replace", "id": 2, "text": "kept"}]
+    )
+    assert contents(messages) == ["0", "1", "kept"]
+    assert result.applied == [{"op": "delete", "ids": [3]}, {"op": "replace", "id": 2, "chars": 4}]
+    assert result.error is None
+
+
+def test_one_invalid_edit_rejects_the_whole_reply():
     messages = blocks(2)
     result = management.apply_edits(
         messages,
         [{"op": "delete", "ids": [3]}, {"op": "replace", "id": 2, "text": "kept"}, {"op": "x"}],
     )
-    assert contents(messages) == ["0", "1", "kept"]
-    assert result.applied == [{"op": "delete", "ids": [3]}, {"op": "replace", "id": 2, "chars": 4}]
-    assert "unknown edit" in result.error
+    assert contents(messages) == ["0", "1", "2", "3"]
+    assert result.applied == []
+    assert result.error.startswith("rejected whole reply") and "unknown edit" in result.error
 
 
 def test_delete_naming_protected_ids_is_rejected_whole():
@@ -122,13 +132,45 @@ def test_delete_with_missing_or_malformed_ids_is_rejected_whole():
     assert len(messages) == 6
 
 
-def test_rejected_delete_does_not_block_other_edits():
+def test_27b_consolidation_into_block_1_does_not_lose_the_deleted_blocks():
+    # 27B (edit-v2 pilot): "copy the needles into block 1" + "delete 2..11". The copy is invalid, so
+    # the delete must not run either; independent validation lost every needle here.
+    messages = blocks(10)
+    result = management.apply_edits(
+        messages,
+        [
+            {"op": "delete", "ids": list(range(2, 12))},
+            {"op": "replace", "id": 1, "text": "needles"},
+        ],
+    )
+    assert len(messages) == 12 and result.applied == []
+    assert "bad replace id 1" in result.error
+
+
+def test_note_creates_then_replaces_the_notes_block_after_the_instruction():
     messages = blocks(4)
     result = management.apply_edits(
-        messages, [{"op": "delete", "ids": [0, 2]}, {"op": "delete", "ids": [4]}]
+        messages, [{"op": "note", "text": "n1"}, {"op": "delete", "from": 2, "to": 5}]
     )
-    assert contents(messages) == ["0", "1", "2", "3", "5"]
-    assert result.applied == [{"op": "delete", "ids": [4]}] and "protected" in result.error
+    header = management.NOTES_HEADER
+    assert contents(messages) == ["0", "1", f"{header}\nn1"]
+    assert result.applied == [{"op": "note", "chars": 2}, {"op": "delete", "ids": [2, 3, 4, 5]}]
+    messages += [{"role": "user", "content": "6"}]
+    management.apply_edits(messages, [{"op": "note", "text": "n1 n2"}])
+    assert contents(messages) == ["0", "1", f"{header}\nn1 n2", "6"]
+
+
+def test_several_notes_keep_the_last():
+    messages = blocks(2)
+    edits = [{"op": "note", "text": "a"}, {"op": "note", "text": "b"}]
+    result = management.apply_edits(messages, edits)
+    assert contents(messages)[2] == f"{management.NOTES_HEADER}\nb"
+    assert result.applied == [{"op": "note", "chars": 1}] and "several notes" in result.error
+
+
+def test_instructions_offer_notes_and_say_replies_are_atomic():
+    text = management.EDIT_INSTRUCTIONS
+    assert '"op": "note"' in text and "applied as a whole" in text
 
 
 def test_delete_range_is_inclusive():

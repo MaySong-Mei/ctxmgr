@@ -6,18 +6,22 @@ numbered blocks, and the editor answers with one JSON object of edits. Blocks 0 
 where* (see `agents.py`): self-management asks the actor inside its own conversation; a peer is a
 separate session that reads the context as a document.
 
-Validation rules (from the first managed pilot on 2B/4B):
-- A delete is all-or-nothing: if any id it names is protected, out of range or not an integer, the
-  whole edit is rejected. Dropping the bad ids and applying the rest turned 2B's "delete 0..N" into
-  a wipe of every editable block.
+Validation rules (from the managed pilots on 2B/4B and the 27B peer):
+- A reply is all-or-nothing: if any edit in it is invalid, none is applied and every reason is
+  reported. A reply is one plan; applying half of it destroyed data (27B paired "copy the needles
+  into block 1" with "delete blocks 2-11"; the copy was rejected, the delete went through).
 - A delete takes either an id list or an inclusive range ("from"/"to"), not both, so long id lists
-  don't run into the manager's output-token cap.
+  don't run into the manager's output-token cap. Protected (0/1), missing, negative or non-integer
+  ids make it invalid.
 - A missing "op" is inferred when the fields are unambiguous: "id" + "text" is a replace (4B wrote
   replaces this way), "ids" or "from"/"to" without "text" is a delete. Inferred edits carry
-  `"inferred_op": true` in the log, so protocol slips stay countable. Anything else is rejected.
-- Edits are validated independently: one rejected edit doesn't block the others.
-- Conflicts within one reply: a block that is both replaced and deleted is kept with its replacement
-  (the delete skips it), and a block replaced twice keeps the last text; both are reported.
+  `"inferred_op": true` in the log, so protocol slips stay countable. Anything else is invalid.
+- `note` writes the notes block: one block right after the task instruction that holds consolidated
+  content. It is created on first use and each note replaces it whole. It gives a manager a legal
+  place to gather what must be kept (27B otherwise tried to rewrite the protected instruction).
+- Conflicts within one valid reply are resolved, not rejected: a block both replaced and deleted is
+  kept with its replacement, a block replaced twice (or several notes) keeps the last text; both are
+  reported.
 """
 
 import json
@@ -25,10 +29,11 @@ import re
 from dataclasses import dataclass
 
 PROTECTED = 2  # system prompt + task instruction
+NOTES_HEADER = "[NOTES kept by context management]"
 
-# Bump when EDIT_INSTRUCTIONS changes; logged per episode. v1 = first pilots, v2 = states what to keep
-# (v1 managers, incl. 27B, freed space by deleting every block, needles included).
-EDIT_PROMPT_VERSION = "edit-v2"
+# Bump when EDIT_INSTRUCTIONS or the edit semantics change; logged per episode.
+# v1 = first pilots; v2 = says what to keep; v3 = all-or-nothing replies + notes block.
+EDIT_PROMPT_VERSION = "edit-v3"
 
 EDIT_INSTRUCTIONS = """\
 The context is shown as numbered blocks. It is close to its size limit, so free space by editing it.
@@ -37,15 +42,17 @@ much space you free.
 First read block 1, the task instruction: it says what the assistant must keep and what later
 operations will ask about. Before removing a block, check it for such information:
 - If a block holds nothing the task needs, delete it.
-- If a block mixes needed lines with filler, replace it with only the needed lines, copied exactly.
+- If a block mixes needed lines with filler, replace it with only the needed lines, copied exactly,
+  or copy those lines into the notes block and then delete the block.
 - Never delete the only copy of something the task needs. Deleting every block is almost always wrong.
 Allowed edits (blocks 0 and 1 cannot be edited):
 - {"op": "delete", "ids": [<block ids>]} removes blocks.
 - {"op": "delete", "from": <first id>, "to": <last id>} removes a run of blocks (both ends included).
-  A delete that names block 0 or 1 is rejected entirely.
-- {"op": "replace", "id": <block id>, "text": "<new text>"} rewrites one block, e.g. to keep only the
-  lines later operations will need.
-Keep everything that later operations will need, copied exactly. Do not answer the task here.
+- {"op": "replace", "id": <block id>, "text": "<new text>"} rewrites one block.
+- {"op": "note", "text": "<text>"} writes the notes block, kept right after block 1. Each note
+  replaces the whole notes block, so include everything from the old notes that is still needed.
+Your reply is applied as a whole: if any edit is invalid (e.g. it names block 0 or 1), none of your
+edits are applied. Do not answer the task here.
 Reply with only one JSON object: {"edits": [ ... ]}"""
 
 PEER_SYSTEM = (
@@ -124,9 +131,14 @@ def _infer_op(edit: dict) -> str | None:
     return None
 
 
+def _is_notes(message: dict) -> bool:
+    return message["content"].startswith(NOTES_HEADER)
+
+
 def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
-    """Apply valid edits; skip (and report) invalid ones. Ids refer to the pre-edit numbering."""
-    deletes, replaces, applied, problems = set(), {}, [], []
+    """Apply a reply's edits as one unit. Ids refer to the pre-edit numbering."""
+    deletes, replaces, applied, rejected, warnings = set(), {}, [], [], []
+    note = None
     for edit in edits:
         op = edit.get("op") if isinstance(edit, dict) else None
         inferred = op is None and isinstance(edit, dict) and _infer_op(edit) is not None
@@ -136,7 +148,7 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
         if op == "delete":
             ids, problem = _delete_ids(edit, len(messages))
             if problem:
-                problems.append(problem)
+                rejected.append(problem)
             else:
                 deletes.update(ids)
                 applied.append({"op": "delete", "ids": ids, **flag})
@@ -144,27 +156,37 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
             i = edit.get("id")
             if _is_id(i) and PROTECTED <= i < len(messages):
                 if i in replaces:
-                    problems.append(f"block {i} replaced twice; kept the last text")
+                    warnings.append(f"block {i} replaced twice; kept the last text")
                     applied = [a for a in applied if not (a["op"] == "replace" and a["id"] == i)]
                 replaces[i] = edit["text"]
                 applied.append({"op": "replace", "id": i, "chars": len(edit["text"]), **flag})
             else:
-                problems.append(f"bad replace id {i}")
+                rejected.append(f"bad replace id {i}")
+        elif op == "note" and isinstance(edit.get("text"), str):
+            if note is not None:
+                warnings.append("several notes; kept the last")
+                applied = [a for a in applied if a["op"] != "note"]
+            note = edit["text"]
+            applied.append({"op": "note", "chars": len(note)})
         else:
-            problems.append(f"unknown edit {str(edit)[:80]}")
+            rejected.append(f"unknown edit {str(edit)[:80]}")
+    if rejected:
+        return EditResult([], "rejected whole reply: " + "; ".join(rejected + warnings))
     # A replacement is a deliberate "keep this": a delete in the same reply skips that block.
     conflicts = deletes & replaces.keys()
     if conflicts:
         deletes -= conflicts
-        problems.append(f"kept replaced blocks {sorted(conflicts)} that a delete also named")
+        warnings.append(f"kept replaced blocks {sorted(conflicts)} that a delete also named")
         for a in applied:
             if a["op"] == "delete":
                 a["ids"] = [i for i in a["ids"] if i not in conflicts]
         applied = [a for a in applied if a["op"] != "delete" or a["ids"]]
     kept = []
     for i, m in enumerate(messages):
-        if i in deletes:
+        if i in deletes or (note is not None and i >= PROTECTED and _is_notes(m)):
             continue
         kept.append({**m, "content": replaces[i]} if i in replaces else m)
+    if note is not None:
+        kept.insert(PROTECTED, {"role": "user", "content": f"{NOTES_HEADER}\n{note}"})
     messages[:] = kept
-    return EditResult(applied, "; ".join(problems) or None)
+    return EditResult(applied, "; ".join(warnings) or None)

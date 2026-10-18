@@ -39,10 +39,15 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
     `ids` or `from`/`to` without `text` → delete, with the same checks. Inferred edits are logged with
     `"inferred_op": true` so protocol slips stay countable (issue #3). Anything else is rejected.
   - Negative ids are invalid (reported as bad ids, not as protected blocks).
-  - Edits in one reply are checked independently: a rejected edit doesn't block the others.
-  - Conflicts in one reply: a block both replaced and deleted keeps its replacement (the delete skips
-    it); a block replaced twice keeps the last text. Both are reported in `error`, and `applied` lists
-    only what took effect.
+  - **edit-v3 (2026-10-17): a reply is all-or-nothing.** If any edit in it is invalid, none is applied
+    (`error` starts with "rejected whole reply"). Was: edits checked independently, which in the
+    27B pilot applied "delete 2–11" while rejecting the paired "copy the needles into block 1".
+  - **edit-v3: `{"op": "note", "text": ...}`** writes a notes block kept right after block 1 (created on
+    first use, replaced whole by each note), a legal place to consolidate what must be kept.
+  - Conflicts in a valid reply are resolved, not rejected: a block both replaced and deleted keeps its
+    replacement; a block replaced twice (or several notes) keeps the last text. Both are reported in
+    `error`, and `applied` lists only what took effect.
+  - `EDIT_PROMPT_VERSION` (now `edit-v3`) is logged in `episode.json` for every managed episode.
 - Trigger: before a turn, when the live context exceeds 18,432 o200k tokens (60% of the 30,720 wall).
 - `self`: the actor gets the edit request appended to its own conversation (it already holds the full
   text, so it sees block ids with short previews). `peer_same` / `peer_27b`: a separate manager session
@@ -57,8 +62,8 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
   can still hit it); KV R1000 has no way to keep values while dropping SET-BATCH blocks.
 - First managed pilot (2B/4B, 2026-10-17) ran on the pre-hardening protocol; results in `CLAUDE.md` on
   `may/track3-infra`.
-Tested with fake clients only: `uv run pytest -q` 43 passed, Ruff check/format clean (local, after the
-PR #4 review fixes, 2026-10-17; 39 passed on a Bouchet CPU node before them).
+Tested with fake clients only: `uv run pytest -q` 48 passed, Ruff check/format clean (local, edit-v3,
+2026-10-17).
 
 ## Immediate handoffs
 
