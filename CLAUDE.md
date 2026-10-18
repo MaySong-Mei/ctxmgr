@@ -209,6 +209,26 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     of it is rejected (all-or-nothing per reply would have kept the needles); (2) there is no legal
     place to consolidate kept content except rewriting an existing block, so 27B reached for the
     instruction block; (3) the instructions alone do not stop a wholesale delete near the end.
+- peer_27b re-run with edit protocol v3 (2026-10-17, job 29924731, `may/track2-baseline` 80bc314:
+  all-or-nothing replies + `note` op for a notes block after the instruction; 16.8 min).
+
+  | cond | end | turns | reward | loss | peak o200k | events → applied | tokens actor · manager |
+  |---|---|---|---|---|---|---|---|
+  | none | budget_wall | 7 | 0.33 | 0.67 | 33,245 | – | 166K · – |
+  | self | budget_wall | 7 | 0.33 | 0.67 | 32,868 | 3 → 3 | 165K · 108K |
+  | peer_same | budget_wall | 10 | 0.33 | 0.67 | 33,209 | 6 → 6 | 272K · 215K |
+  | peer_27b | stream_exhausted | 24 | **0.71** (68/96) | 0.29 | 29,532 | 7 → 3 | 525K · 246K |
+
+  - 27B uses the notes block as intended: "copy the needles into a note, delete blocks 2–11" (turn 6,
+    20 needles; turn 11, 40 needles; each 21K → 1.1–1.7K o200k). First time any managed condition beats
+    none.
+  - The four failed events (turns 16, 17, 23, 24) all hit the 2,048-token manager output cap
+    (`finish_reason=length`): each note rewrites the whole notes block, which by then holds 53–54
+    needles, so the JSON is cut off and the reply rejected. The lost needles (28/96) come from that.
+  - 2B self deleted single small blocks (−125 o200k each); 2B peer_same deleted block 2 every time
+    (−4K when it was a chunk), so both still hit the wall with the same reward as none.
+  - Next protocol fix candidates: an append-only note (cost grows with new content, not total notes)
+    or a larger manager output budget; record whichever in the edit contract and bump the version.
 
 ## Dev
 
