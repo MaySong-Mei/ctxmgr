@@ -192,6 +192,23 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - So a 27B manager is not enough under this protocol: it frees space but does not keep what the task
     needs. Candidate causes to test: the manager prompt never states the task goal beyond block 1;
     "free space" is the only explicit objective; no feedback on what was lost.
+- peer_27b re-run with edit instructions v2 (2026-10-17, job 29919206, `may/track2-baseline` 6db5ded:
+  "judged by task completion", "read block 1 for what to keep", "replace with the needed lines",
+  "never delete the only copy"; utils 0.79/0.17; 17.8 min). none / self / peer_same unchanged
+  (0.33, all 2B edits rejected or empty). peer_27b: stream_exhausted after 44 turns, **reward 0.00**
+  (loss 1.00), 6 events, actor 807K · manager 192K tokens.
+  - 27B now sometimes does the right thing: at turns 21 and 28 it deleted filler and replaced chunk
+    blocks with exactly their NEEDLES lines (21K → 1.1K, 23K → 1.6K).
+  - At turns 6 and 16 it tried to consolidate the needles into **block 1** (a replace of the task
+    instruction with 22 needle lines appended) together with a delete of blocks 2–11. Block 1 is
+    protected, so the replace was rejected, but edits are validated independently, so the delete
+    went through and the needles were lost. The same happened once in the v1 run (turn 11).
+  - Its last event (turn 44) was `delete from 2 to 38` with no replace, wiping everything before the
+    final grade, hence 0.00.
+  - Protocol issues this exposes: (1) independent validation breaks a manager's plan when one edit
+    of it is rejected (all-or-nothing per reply would have kept the needles); (2) there is no legal
+    place to consolidate kept content except rewriting an existing block, so 27B reached for the
+    instruction block; (3) the instructions alone do not stop a wholesale delete near the end.
 
 ## Dev
 
