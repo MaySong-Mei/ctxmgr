@@ -229,6 +229,17 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     (−4K when it was a chunk), so both still hit the wall with the same reward as none.
   - Next protocol fix candidates: an append-only note (cost grows with new content, not total notes)
     or a larger manager output budget; record whichever in the edit contract and bump the version.
+- peer_27b re-run with edit protocol v4 (2026-10-18, job 29927590, `may/track2-baseline` 8573b2e:
+  append-only notes; 13.5 min). none / self / peer_same unchanged at 0.33 (32/96). peer_27b:
+  budget_wall after 17 turns, **reward 0.75 (72/96)**, loss 0.25, actor 352K · manager 177K tokens.
+  - Turn 6 as in v3 (note with 20 needles, delete 2–11). Turn 11: instead of appending, 27B replaced
+    the notes block with all 40 needles. Turns 16–18: "delete 2–12" (including the notes block) plus
+    a note re-copying all 54 needles; all three hit the 2,048 output cap and were rejected, so the
+    context grew to the wall.
+  - So append-only does not change 27B's behavior: it rebuilds the whole notes block every time
+    (by replace, or by delete + note). The binding limit is the manager's output budget, which is
+    separate from the actor's 2,048-token benchmark reserve: ~96 needles need roughly 3.5K Qwen
+    output tokens.
 
 ## Dev
 
