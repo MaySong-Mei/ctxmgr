@@ -26,8 +26,19 @@ from dataclasses import dataclass
 
 PROTECTED = 2  # system prompt + task instruction
 
+# Bump when EDIT_INSTRUCTIONS changes; logged per episode. v1 = first pilots, v2 = states what to keep
+# (v1 managers, incl. 27B, freed space by deleting every block, needles included).
+EDIT_PROMPT_VERSION = "edit-v2"
+
 EDIT_INSTRUCTIONS = """\
 The context is shown as numbered blocks. It is close to its size limit, so free space by editing it.
+Your edits are judged by whether the assistant can still complete its task afterwards, not by how
+much space you free.
+First read block 1, the task instruction: it says what the assistant must keep and what later
+operations will ask about. Before removing a block, check it for such information:
+- If a block holds nothing the task needs, delete it.
+- If a block mixes needed lines with filler, replace it with only the needed lines, copied exactly.
+- Never delete the only copy of something the task needs. Deleting every block is almost always wrong.
 Allowed edits (blocks 0 and 1 cannot be edited):
 - {"op": "delete", "ids": [<block ids>]} removes blocks.
 - {"op": "delete", "from": <first id>, "to": <last id>} removes a run of blocks (both ends included).

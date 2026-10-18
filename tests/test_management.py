@@ -197,8 +197,10 @@ def test_negative_ids_are_invalid_not_protected():
         assert result.applied == [] and "bad delete" in result.error
 
 
-def test_instructions_offer_ranges():
-    assert '"from"' in management.EDIT_INSTRUCTIONS and '"to"' in management.EDIT_INSTRUCTIONS
+def test_instructions_offer_ranges_and_say_what_to_keep():
+    text = management.EDIT_INSTRUCTIONS
+    assert '"from"' in text and '"to"' in text
+    assert "block 1" in text and "Never delete the only copy" in text
 
 
 def test_parse_edits_tolerates_prose_and_rejects_garbage():
@@ -252,3 +254,11 @@ def test_self_management_exchange_stays_out_of_the_context(tmp_path):
     for path in sorted((out / "context_snapshots").glob("turn-*.json")):
         messages = json.loads(path.read_text(encoding="utf-8"))["messages"]
         assert not any(m["content"].startswith("[CONTEXT MANAGEMENT]") for m in messages)
+
+
+def test_episode_logs_edit_prompt_version(tmp_path):
+    instance = tmp_path / "instance"
+    generate_instance("needle_retention", "K4-C4", 42, instance)
+    agent = SelfManagedAgent(client=client(SelfDeleter()), model="fake/actor", sampling=Sampling())
+    outcome = run_episode(agent, instance, tmp_path / "run", condition="self")
+    assert outcome["episode"]["edit_prompt_version"] == management.EDIT_PROMPT_VERSION

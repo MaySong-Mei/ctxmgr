@@ -24,8 +24,9 @@ CONDITIONS="${CONDITIONS:-none self peer_same peer_27b}"
 SEED="${SEED:-42}"
 TRIGGER="${TRIGGER:-18432}"
 MAX_LEN="${MAX_LEN:-49152}"
-BIG_UTIL="${BIG_UTIL:-0.75}"
-ACTOR_UTIL="${ACTOR_UTIL:-0.21}"
+# At 0.75 the 27B has 2.37 GiB KV, below the 3.3 GiB one 49,152-token request needs (job 29908685).
+BIG_UTIL="${BIG_UTIL:-0.79}"
+ACTOR_UTIL="${ACTOR_UTIL:-0.17}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-64}"
 P1=$((20000 + SLURM_JOB_ID % 10000))
 P2=$((P1 + 1))

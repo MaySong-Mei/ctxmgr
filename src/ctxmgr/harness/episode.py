@@ -16,6 +16,7 @@ from ctxmgr.tasks import score_run, validate_instance
 from ctxmgr.tasks.core import BUDGET, RESERVE, UPSTREAM_COMMIT
 
 from .agents import ChatAgent, ServerRejected
+from .management import EDIT_PROMPT_VERSION
 
 
 def _repo_commit() -> str | None:
@@ -70,6 +71,7 @@ def run_episode(
         "manager_trigger_o200k": getattr(agent, "trigger", None),
         "served_max_len": served_max_len,
         "prompt_version": prompt_version,
+        "edit_prompt_version": EDIT_PROMPT_VERSION if condition != "none" else None,
         "sampling": agent.sampling.__dict__,
         "terminated_by": terminated_by,
         "error": error,
