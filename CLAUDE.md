@@ -270,6 +270,26 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     peer_27b actor 473–869K + manager 50–73K vs none 132K.
   - 2B self / peer_same managers: 2–6 events per episode, mostly applied (single-block deletes), no
     score change. Same-size management is a no-op for 2B on both tasks.
+- peer_27b extension (2026-10-19, job 30046489, 863dce2, same settings, `none` + `peer_27b` only,
+  seeds 46–49 on Needle K4-C24 and K8-C48, 2 h 8 min, all 16 episodes completed). Pooled with
+  job 30043145 for K4-C24 seeds 42–45:
+
+  | level, seed | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 |
+  |---|---|---|---|---|---|---|---|---|
+  | K4-C24 none | 0.33 | 0.33 | 0.33 | 0.33 | 0.33 | 0.33 | 0.33 | 0.04* |
+  | K4-C24 peer_27b | 0.79 | 0.58 | 0.79 | 0.58 | 0.79 | 1.00 | 0.58 | 1.00 |
+  | K8-C48 none | | | | | 0.15 | 0.15 | 0.15 | 0.15 |
+  | K8-C48 peer_27b | | | | | 0.35 | 0.35 | 0.35 | 0.35 |
+
+  \* `server_rejected` at turn 7: 47,105 Qwen prompt tokens + 2,048 > `max_len` 49,152 while still
+  under the o200k wall (the Qwen/o200k ratio problem Ruthvik reported on #3; serve ≥ 81,920).
+  - K4-C24: peer_27b > none on 8/8 seeds, mean paired difference +0.47 (bootstrap 95% CI
+    0.33–0.64), one-sided sign test p = 0.004; excluding the flawed s49 none, 7/7, p = 0.008, mean
+    +0.40. Caveats: temperature 0, seeds share the level's structure (only 4 distinct difference
+    values), one actor size, vLLM/FP8 stack (not comparable with the llama.cpp/Q8_0 baseline).
+  - K8-C48 (384 needles): peer_27b 0.35 vs 0.15 on all 4 seeds (identical outcomes), but every
+    episode still hits the budget wall: 3 manager replies per episode hit the 4,096 output cap
+    because 27B rewrites the whole notes block. 4/4 positive, p = 0.06.
 
 ## Dev
 
