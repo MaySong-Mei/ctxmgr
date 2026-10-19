@@ -240,6 +240,17 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     (by replace, or by delete + note). The binding limit is the manager's output budget, which is
     separate from the actor's 2,048-token benchmark reserve: ~96 needles need roughly 3.5K Qwen
     output tokens.
+- peer_27b re-run with `manager_max_tokens` = 4096 (2026-10-19, job 30037280, `may/track2-baseline`
+  d15e82a, edit-v4; actor stays 2,048; 13.1 min). none / self / peer_same unchanged at 0.33 (32/96).
+  peer_27b: **stream_exhausted after 24 turns, reward 0.79 (76/96)**, loss 0.21, peak 22.1K o200k,
+  actor 441K · manager 127K tokens, no capped manager reply (longest 2,302 tokens).
+  - Turns 6, 11, 16: notes with 20 / 40 / 60 needles plus deletes (21K → 1.1K / 1.7K / 2.2K). The
+    turn-16 note (60 needles, 2,302 tokens) is the one 2,048 used to cut off.
+  - Turn 21: `delete 3–12` with no note, dropping the 20 needles that arrived after turn 16; they
+    are the whole 0.21 loss. No protocol error remains: the last failure is the manager's choice.
+  - Progression on this instance (2B actor, Needle K4-C24, seed 42): none 0.33 · 27B manager v1 0.17
+    · v2 0.00 · v3 0.71 · v4 0.75 · v4 + 4096 budget 0.79. Same-size 2B managers stay at 0.33 in all
+    versions (their edits are rejected, empty, or delete one block). Single seed: not yet a result.
 
 ## Dev
 
