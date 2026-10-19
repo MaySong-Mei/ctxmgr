@@ -251,6 +251,25 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - Progression on this instance (2B actor, Needle K4-C24, seed 42): none 0.33 · 27B manager v1 0.17
     · v2 0.00 · v3 0.71 · v4 0.75 · v4 + 4096 budget 0.79. Same-size 2B managers stay at 0.33 in all
     versions (their edits are rejected, empty, or delete one block). Single seed: not yet a result.
+- Multi-seed peer_27b pilot (2026-10-19, job 30043145, `may/track2-baseline` 863dce2, edit-v4,
+  manager_max_tokens 4096, 2B actor, seeds 42–45, 56.6 min, all 32 episodes completed).
+
+  | level | none | self | peer_same | peer_27b (per seed 42/43/44/45) |
+  |---|---|---|---|---|
+  | Needle K4-C24 | 0.33 | 0.33 | 0.33 | **0.69** (0.79 / 0.58 / 0.79 / 0.58) |
+  | KV R1000 | 0.00 | 0.00 | 0.00 | 0.07 (0.00 / 0.00 / 0.29 / 0.00) |
+
+  - Needle: the 27B gain holds on every seed (min 0.58 vs 0.33), and peer_27b always finishes the
+    stream (4 events, all applied, none capped). Seed 42 reproduces the previous run exactly (0.79).
+    none / self / peer_same are 0.33 on every seed. Seeds change the words, not the structure, so
+    results pair up (42 = 44, 43 = 45, down to token counts): weak replicates, not independent ones.
+  - KV R1000: 27B frees space by `delete from 2 to 9` (all SET batches, 20K → 0.7K) without keeping
+    any values in a note, so the stream finishes but GETs find nothing. Only seed 44 scored (0.29).
+    The edit protocol lets a manager keep values (note/replace); 27B does not choose to.
+  - Cost: Needle peer_27b actor 435–441K + manager 123–126K tokens vs none 165K (3.4×). KV
+    peer_27b actor 473–869K + manager 50–73K vs none 132K.
+  - 2B self / peer_same managers: 2–6 events per episode, mostly applied (single-block deletes), no
+    score change. Same-size management is a no-op for 2B on both tasks.
 
 ## Dev
 
