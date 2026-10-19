@@ -5,6 +5,7 @@
 # Usage (from repo root):
 #   sbatch slurm/peer27b_pilot.sbatch
 #   ACTOR=Qwen/Qwen3.5-0.8B LEVELS="needle_retention:K4-C24" CONDITIONS="none peer_27b" sbatch ...
+#   SEEDS="42 43 44 45" LEVELS="needle_retention:K4-C24 kv_store:R1000" sbatch slurm/peer27b_pilot.sbatch
 #SBATCH --job-name=ctxmgr-peer27b
 #SBATCH --partition=education_gpu
 #SBATCH --gpus=a40:1
@@ -21,7 +22,8 @@ ACTOR="${ACTOR:-Qwen/Qwen3.5-2B}"
 MANAGER="${MANAGER:-Qwen/Qwen3.5-27B-FP8}"
 LEVELS="${LEVELS:-needle_retention:K4-C24}"
 CONDITIONS="${CONDITIONS:-none self peer_same peer_27b}"
-SEED="${SEED:-42}"
+# Space-separated; each (level, seed) instance is generated once and shared by all conditions.
+SEEDS="${SEEDS:-${SEED:-42}}"
 TRIGGER="${TRIGGER:-18432}"
 MAX_LEN="${MAX_LEN:-49152}"
 # At 0.75 the 27B has 2.37 GiB KV, below the 3.3 GiB one 49,152-token request needs (job 29908685).
@@ -35,17 +37,19 @@ TAG="${ACTOR##*/}"
 RUNS="${PROJECT_DIR}/runs/peer27b-${J}"
 
 echo "host=$(hostname) job=${J} actor=${ACTOR} manager=${MANAGER} conditions=${CONDITIONS}"
-echo "levels=${LEVELS} seed=${SEED} trigger=${TRIGGER} max_len=${MAX_LEN} commit=$(git rev-parse --short HEAD)"
+echo "levels=${LEVELS} seeds=${SEEDS} trigger=${TRIGGER} max_len=${MAX_LEN} commit=$(git rev-parse --short HEAD)"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
 uv sync --locked --group serve --quiet || exit 1
 
 failed=()
-for item in ${LEVELS}; do
-    family="${item%%:*}" level="${item##*:}"
-    name="${family}-${level}-s${SEED}"
-    uv run python -m ctxmgr.tasks generate "${family}" --level "${level}" --seed "${SEED}" \
-        --out "${RUNS}/instances/${name}" > /dev/null || failed+=("${name}:generate")
+for SEED in ${SEEDS}; do
+    for item in ${LEVELS}; do
+        family="${item%%:*}" level="${item##*:}"
+        name="${family}-${level}-s${SEED}"
+        uv run python -m ctxmgr.tasks generate "${family}" --level "${level}" --seed "${SEED}" \
+            --out "${RUNS}/instances/${name}" > /dev/null || failed+=("${name}:generate")
+    done
 done
 
 # The manager starts first and takes its share; the actor fits in what is left.
@@ -61,22 +65,25 @@ if ! wait_healthy "${P2}" "${actor_pid}" "logs/vllm-${J}-actor.log"; then
 fi
 gpu_mem
 
-for item in ${LEVELS}; do
-    family="${item%%:*}" level="${item##*:}"
-    name="${family}-${level}-s${SEED}"
-    instance="${RUNS}/instances/${name}"
-    [[ -d "${instance}" ]] || continue
-    for cond in ${CONDITIONS}; do
-        echo "===== ${TAG} ${cond} ${name} ====="
-        extra=()
-        [[ "${cond}" == "peer_27b" ]] && extra=(--manager-base-url "http://127.0.0.1:${P1}/v1" \
-            --manager-model "${MANAGER}")
-        if ! uv run python -m ctxmgr.harness run "${instance}" \
-            --out "${RUNS}/${TAG}/${cond}/${name}" --condition "${cond}" \
-            --base-url "http://127.0.0.1:${P2}/v1" --model "${ACTOR}" \
-            --served-max-len "${MAX_LEN}" --precision bf16 --trigger "${TRIGGER}" "${extra[@]}"; then
-            failed+=("${cond}/${name}:run")
-        fi
+for SEED in ${SEEDS}; do
+    for item in ${LEVELS}; do
+        family="${item%%:*}" level="${item##*:}"
+        name="${family}-${level}-s${SEED}"
+        instance="${RUNS}/instances/${name}"
+        [[ -d "${instance}" ]] || continue
+        for cond in ${CONDITIONS}; do
+            echo "===== ${TAG} ${cond} ${name} ====="
+            extra=()
+            [[ "${cond}" == "peer_27b" ]] && extra=(--manager-base-url "http://127.0.0.1:${P1}/v1" \
+                --manager-model "${MANAGER}")
+            if ! uv run python -m ctxmgr.harness run "${instance}" \
+                --out "${RUNS}/${TAG}/${cond}/${name}" --condition "${cond}" \
+                --base-url "http://127.0.0.1:${P2}/v1" --model "${ACTOR}" \
+                --served-max-len "${MAX_LEN}" --precision bf16 --trigger "${TRIGGER}" \
+                "${extra[@]}"; then
+                failed+=("${cond}/${name}:run")
+            fi
+        done
     done
 done
 gpu_mem
