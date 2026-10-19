@@ -69,6 +69,7 @@ def run_episode(
         "budget": BUDGET,
         "reserve": RESERVE,
         "manager_trigger_o200k": getattr(agent, "trigger", None),
+        "manager_max_tokens": getattr(agent, "manager_max_tokens", None),
         "served_max_len": served_max_len,
         "prompt_version": prompt_version,
         "edit_prompt_version": EDIT_PROMPT_VERSION if condition != "none" else None,

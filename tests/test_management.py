@@ -4,6 +4,8 @@ import json
 import re
 from types import SimpleNamespace
 
+import httpx2
+import openai
 from test_harness import FakeCompletions
 
 from ctxmgr.harness import management
@@ -325,3 +327,37 @@ def test_episode_logs_edit_prompt_version(tmp_path):
     agent = SelfManagedAgent(client=client(SelfDeleter()), model="fake/actor", sampling=Sampling())
     outcome = run_episode(agent, instance, tmp_path / "run", condition="self")
     assert outcome["episode"]["edit_prompt_version"] == management.EDIT_PROMPT_VERSION
+
+
+class Rejecting:
+    """Manager server that refuses every request (e.g. prompt + max_tokens over max_len)."""
+
+    def __init__(self):
+        self.kwargs = []
+
+    def create(self, *, model, messages, **kwargs):
+        self.kwargs.append(kwargs)
+        response = httpx2.Response(400, request=httpx2.Request("POST", "http://fake/v1"))
+        raise openai.BadRequestError("max_model_len exceeded", response=response, body=None)
+
+
+def test_manager_has_its_own_output_budget_and_rejections_do_not_end_the_episode(tmp_path):
+    instance = tmp_path / "instance"
+    generate_instance("needle_retention", "K4-C24", 42, instance)
+    actor, manager = FakeCompletions(), Rejecting()
+    agent = PeerManagedAgent(
+        client=client(actor),
+        model="fake/actor",
+        sampling=Sampling(),
+        manager_client=client(manager),
+        manager_model="fake/manager",
+    )
+    out = tmp_path / "run"
+    outcome = run_episode(agent, instance, out, condition="peer_27b", manager_model="fake/manager")
+
+    assert {r["max_tokens"] for r in actor.requests} == {2048}
+    assert {k["max_tokens"] for k in manager.kwargs} == {4096}
+    assert outcome["episode"]["manager_max_tokens"] == 4096
+    assert outcome["episode"]["terminated_by"] == "budget_wall"
+    edits = [json.loads(line) for line in (out / "edits.jsonl").read_text().splitlines()]
+    assert edits and all(e["error"].startswith("server rejected the edit request") for e in edits)

@@ -60,12 +60,13 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
   rejection errors, and the manager's raw reply as `reply`) in `edits.jsonl`. Malformed edit replies
   apply nothing and are logged.
 - Open: trigger value; whether self should see full text instead of previews; whether `replace` may
-  rewrite user operations; manager output budget (currently the same 2,048 max_tokens; long replaces
-  can still hit it); KV R1000 has no way to keep values while dropping SET-BATCH blocks.
+  rewrite user operations; manager output budget (2026-10-19: edit requests get their own `manager_max_tokens`
+  = 4096, actor stays 2,048; logged in `episode.json`; a server rejection of an edit request is a
+  failed event, not the end of the episode); KV R1000 has no way to keep values while dropping SET-BATCH blocks.
 - First managed pilot (2B/4B, 2026-10-17) ran on the pre-hardening protocol; results in `CLAUDE.md` on
   `may/track3-infra`.
-Tested with fake clients only: `uv run pytest -q` 50 passed, Ruff check/format clean (local, edit-v4,
-2026-10-18).
+Tested with fake clients only: `uv run pytest -q` 51 passed, Ruff check/format clean (local, edit-v4 +
+manager_max_tokens, 2026-10-19).
 
 ## Immediate handoffs
 

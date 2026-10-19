@@ -32,6 +32,12 @@ def main():
     cmd.add_argument("--thinking", action="store_true", help="enable Qwen3.5 thinking")
     cmd.add_argument("--timeout", type=float, default=600.0, help="seconds per request")
     cmd.add_argument("--trigger", type=int, default=ManagedAgent.trigger, help="o200k tokens")
+    cmd.add_argument(
+        "--manager-max-tokens",
+        type=int,
+        default=ManagedAgent.manager_max_tokens,
+        help="output budget of edit requests (self and peer)",
+    )
     cmd.add_argument("--manager-base-url", help="peer manager server (default: --base-url)")
     cmd.add_argument("--manager-model", help="peer manager model (peer_same: same as --model)")
     args = parser.parse_args()
@@ -40,6 +46,7 @@ def main():
     kwargs = {}
     if args.condition != "none":
         kwargs["trigger"] = args.trigger
+        kwargs["manager_max_tokens"] = args.manager_max_tokens
     if args.condition.startswith("peer"):
         if args.condition == "peer_27b" and not args.manager_model:
             parser.error("peer_27b needs --manager-model")

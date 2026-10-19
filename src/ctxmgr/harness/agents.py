@@ -26,11 +26,11 @@ class Sampling:
     max_tokens: int = 2048  # matches the benchmark's 2,048-token reserve
     thinking: bool = False  # Qwen3.5 thinks by default; off keeps reasoning text out of the context
 
-    def request_kwargs(self) -> dict:
+    def request_kwargs(self, max_tokens: int | None = None) -> dict:
         return {
             "temperature": self.temperature,
             "top_p": self.top_p,
-            "max_tokens": self.max_tokens,
+            "max_tokens": max_tokens or self.max_tokens,
             "extra_body": {"chat_template_kwargs": {"enable_thinking": self.thinking}},
         }
 
@@ -77,12 +77,14 @@ class ChatAgent:
     def before_turn(self) -> None:
         """Context management runs here, after the previous turn was snapshotted."""
 
-    def complete(self, messages: list[dict], *, role: str, client=None, model=None) -> str:
+    def complete(
+        self, messages: list[dict], *, role: str, client=None, model=None, max_tokens=None
+    ) -> str:
         client, model = client or self.client, model or self.model
         start = time.monotonic()
         try:
             response = client.chat.completions.create(
-                model=model, messages=messages, **self.sampling.request_kwargs()
+                model=model, messages=messages, **self.sampling.request_kwargs(max_tokens)
             )
         except openai.BadRequestError as error:
             raise ServerRejected(str(error)) from error
@@ -121,6 +123,9 @@ class ManagedAgent(ChatAgent):
 
     editor: ClassVar[str] = "actor"
     trigger: int = 18432  # 60% of the 30,720-token wall
+    # Edit replies have their own output budget: the actor's 2,048 matches the benchmark reserve, but a
+    # manager output never enters the actor's context, and 2,048 cut off 27B notes of ~54 needles.
+    manager_max_tokens: int = 4096
     edits: list[dict] = field(default_factory=list)
 
     def reset(self, system: str, instruction: str) -> None:
@@ -131,8 +136,15 @@ class ManagedAgent(ChatAgent):
         before = count_tokens(self.messages)[0]
         if before <= self.trigger:
             return
-        reply = self.request_edits(before)
+        try:
+            reply = self.request_edits(before)
+        except ServerRejected as rejected:
+            # e.g. prompt + manager_max_tokens over the served max_len: a failed event, not the end.
+            reply, rejected_error = "", f"server rejected the edit request: {str(rejected)[:300]}"
+        else:
+            rejected_error = None
         proposed, error = management.parse_edits(reply)
+        error = rejected_error or error
         result = management.apply_edits(self.messages, proposed)
         self.edits.append(
             {
@@ -163,7 +175,9 @@ class SelfManagedAgent(ManagedAgent):
             f"{management.EDIT_INSTRUCTIONS}\n\nBlocks:\n{management.index(self.messages)}"
         )
         return self.complete(
-            [*self.messages, {"role": "user", "content": request}], role="self_manager"
+            [*self.messages, {"role": "user", "content": request}],
+            role="self_manager",
+            max_tokens=self.manager_max_tokens,
         )
 
 
@@ -188,4 +202,5 @@ class PeerManagedAgent(ManagedAgent):
             role="manager",
             client=self.manager_client,
             model=self.manager_model,
+            max_tokens=self.manager_max_tokens,
         )
