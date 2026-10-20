@@ -362,6 +362,20 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     KV (the actor must answer GETs from what was kept) is the task where actor and manager interact.
   - Next: round 6 = KV with v7 (2B actor, none vs peer_27b, R1000 + R2000, seeds 42-45). Under v4,
     27B deleted all SET batches without noting values (0.07).
+- Round 6 first attempt (job 30069167) cancelled after 9.7 h: in KV R1000 s42 under peer_27b the 2B
+  actor answered GETs but never wrote READY_FOR_NEXT_OP; the manager kept the context small, so the
+  budget wall never ended it (53,920 turns, 3.4 GB of snapshots in `runs/peer27b-30069167`, left
+  for May to delete). Fix `may/track2-baseline` 1cc9124: `max_turns` = 2 x n_ops + 10 (`max_steps`).
+- Round 6: KV with frozen v7 (2026-10-21, job 30070167, 2B, none vs peer_27b, R1000 + R2000, seeds
+  42-45, 25.5 min). none 0.00 on all 8 (budget wall, turn 6). peer_27b 0.00 except R1000 s44 (0.29);
+  R1000 s42 hit `max_steps` (78 turns); one R2000 edit request was rejected by the server.
+  - 27B never notes a value: every event is `delete 2-9` (all SET batches, 20K -> 0.7K o200k), so
+    GETs find nothing. v7's "note what the task needs" did not change this on KV.
+  - Structural limit: the KV instruction says no files/tools, everything must stay in context, and
+    any key may be queried. R1000 values alone are ~35K o200k (> 30,720 usable), R2000 ~70K, so
+    full retention is impossible; a manager can at best keep a share of the SET lines. 27B keeps none.
+  - Next: round 7 = KV R520 (environment pressure 0.85: management is triggered by the actor's
+    replies, but all values fit), 2B, none vs peer_27b, seeds 42-45.
 
 ## Dev
 
