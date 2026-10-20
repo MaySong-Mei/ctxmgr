@@ -40,8 +40,9 @@ NOTES_HEADER = "[NOTES kept by context management]"
 
 # Bump when EDIT_INSTRUCTIONS or the edit semantics change; logged per episode.
 # v1 = first pilots; v2 = says what to keep; v3 = all-or-nothing replies + notes block;
-# v4 = notes are append-only; v5 = notes block can't be deleted or rewritten, appends are deduplicated.
-EDIT_PROMPT_VERSION = "edit-v5"
+# v4 = notes are append-only; v5 = notes block can't be deleted or rewritten, appends are deduplicated;
+# v6 = v5 semantics, instructions say to note needed lines from every block before deleting it.
+EDIT_PROMPT_VERSION = "edit-v6"
 
 EDIT_INSTRUCTIONS = """\
 The context is shown as numbered blocks. It is close to its size limit, so free space by editing it.
@@ -58,8 +59,10 @@ Allowed edits (blocks 0 and 1 cannot be edited):
 - {"op": "delete", "from": <first id>, "to": <last id>} removes a run of blocks (both ends included).
 - {"op": "replace", "id": <block id>, "text": "<new text>"} rewrites one block.
 - {"op": "note", "text": "<text>"} adds lines to the notes block, kept right after block 1 (it is
-  created on first use). The notes block is always kept: it cannot be deleted, and lines already in
-  it are never added twice, so only note lines that are new. Never copy the existing notes again.
+  created on first use). The notes block is always kept and cannot be deleted.
+Before you delete a block that holds lines the task needs, copy those lines from that block into a
+note in the same reply. Do this every time you delete such blocks, not only the first time. You do
+not need to copy the notes block itself: lines it already holds are dropped automatically.
 Your reply is applied as a whole: if any edit is invalid (e.g. it names block 0 or 1), none of your
 edits are applied. Do not answer the task here.
 Reply with only one JSON object: {"edits": [ ... ]}"""

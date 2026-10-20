@@ -53,7 +53,10 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
     it skips it), a replace of it is read as a note, and notes only add lines it does not hold yet.
     The context view labels it `notes, always kept`. Reason: 27B kept rebuilding the whole notes
     block in v4, which hit the 4,096 output cap at 384 needles (K8-C48).
-  - `EDIT_PROMPT_VERSION` (now `edit-v5`) is logged in `episode.json` for every managed episode.
+  - **edit-v6 (2026-10-20):** same semantics as v5; the instructions now say to note the needed lines
+    from every block before deleting it (v5's "never copy the existing notes again" made 27B stop
+    noting after the first event).
+  - `EDIT_PROMPT_VERSION` (now `edit-v6`) is logged in `episode.json` for every managed episode.
 - Trigger: before a turn, when the live context exceeds 18,432 o200k tokens (60% of the 30,720 wall).
 - `self`: the actor gets the edit request appended to its own conversation (it already holds the full
   text, so it sees block ids with short previews). `peer_same` / `peer_27b`: a separate manager session
