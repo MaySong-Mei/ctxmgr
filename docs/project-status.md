@@ -49,7 +49,11 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
   - Conflicts in a valid reply are resolved, not rejected: a block both replaced and deleted keeps its
     replacement; a block replaced twice (or several notes) keeps the last text. Both are reported in
     `error`, and `applied` lists only what took effect.
-  - `EDIT_PROMPT_VERSION` (now `edit-v4`) is logged in `episode.json` for every managed episode.
+  - **edit-v5 (2026-10-20): the notes block is kept by the protocol.** Deletes skip it (a range over
+    it skips it), a replace of it is read as a note, and notes only add lines it does not hold yet.
+    The context view labels it `notes, always kept`. Reason: 27B kept rebuilding the whole notes
+    block in v4, which hit the 4,096 output cap at 384 needles (K8-C48).
+  - `EDIT_PROMPT_VERSION` (now `edit-v5`) is logged in `episode.json` for every managed episode.
 - Trigger: before a turn, when the live context exceeds 18,432 o200k tokens (60% of the 30,720 wall).
 - `self`: the actor gets the edit request appended to its own conversation (it already holds the full
   text, so it sees block ids with short previews). `peer_same` / `peer_27b`: a separate manager session
@@ -65,8 +69,8 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
   failed event, not the end of the episode); KV R1000 has no way to keep values while dropping SET-BATCH blocks.
 - First managed pilot (2B/4B, 2026-10-17) ran on the pre-hardening protocol; results in `CLAUDE.md` on
   `may/track3-infra`.
-Tested with fake clients only: `uv run pytest -q` 51 passed, Ruff check/format clean (local, edit-v4 +
-manager_max_tokens, 2026-10-19).
+Tested with fake clients only: `uv run pytest -q` 53 passed, Ruff check/format clean (local, edit-v5,
+2026-10-20).
 
 ## Immediate handoffs
 

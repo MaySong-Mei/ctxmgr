@@ -174,21 +174,45 @@ def test_several_notes_in_one_reply_are_appended_in_order():
     assert len(result.applied) == 2 and result.error is None
 
 
-def test_replacing_the_notes_block_prunes_it_and_keeps_it_the_notes_block():
+def test_v5_replace_of_the_notes_block_is_read_as_a_note():
     messages = blocks(2)
     management.apply_edits(messages, [{"op": "note", "text": "old\nkeep"}])
     result = management.apply_edits(
         messages, [{"op": "replace", "id": 2, "text": "keep"}, {"op": "note", "text": "new"}]
     )
-    assert contents(messages)[2] == f"{management.NOTES_HEADER}\nkeep\nnew"
-    assert len(messages) == 5 and result.error is None
+    assert contents(messages)[2] == f"{management.NOTES_HEADER}\nold\nkeep\nnew"
+    assert len(messages) == 5
+    assert {"op": "note", "chars": 4, "from_replace": True} in result.applied
+    assert "read as a note" in result.error and "dropped 1 lines" in result.error
 
 
-def test_deleting_the_notes_block_then_noting_starts_fresh():
+def test_v5_deletes_skip_the_notes_block():
     messages = blocks(2)
     management.apply_edits(messages, [{"op": "note", "text": "old"}])
     management.apply_edits(messages, [{"op": "delete", "ids": [2]}, {"op": "note", "text": "new"}])
-    assert contents(messages)[2] == f"{management.NOTES_HEADER}\nnew"
+    assert contents(messages)[2] == f"{management.NOTES_HEADER}\nold\nnew"
+
+
+def test_v5_27b_rebuild_pattern_keeps_notes_and_drops_duplicates():
+    # 27B (edit-v4, K8-C48): "delete from 2 to N" over the notes block plus a note re-copying every
+    # needle. v5 keeps the notes block, adds only the new needles and deletes the chunks.
+    messages = blocks(2)
+    management.apply_edits(
+        messages, [{"op": "note", "text": "n1\nn2"}, {"op": "delete", "ids": [3]}]
+    )
+    messages += [{"role": "user", "content": "chunk with n3"}]
+    result = management.apply_edits(
+        messages, [{"op": "delete", "from": 2, "to": 4}, {"op": "note", "text": "n1\nn2\nn3"}]
+    )
+    assert contents(messages) == ["0", "1", f"{management.NOTES_HEADER}\nn1\nn2\nn3"]
+    assert "never deleted" in result.error and "dropped 2 lines" in result.error
+
+
+def test_v5_context_view_labels_the_notes_block():
+    messages = blocks(2)
+    management.apply_edits(messages, [{"op": "note", "text": "n1"}])
+    assert "[block 2 | notes, always kept]" in management.render(messages)
+    assert "[block 2 | notes, always kept]" in management.index(messages)
 
 
 def test_instructions_offer_notes_and_say_replies_are_atomic():

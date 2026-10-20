@@ -20,8 +20,12 @@ Validation rules (from the managed pilots on 2B/4B and the 27B peer):
   consolidated content, created on first use. It gives a manager a legal place to gather what must be
   kept (27B otherwise tried to rewrite the protected instruction). Appending (v4) instead of rewriting
   the whole block (v3) keeps a note's size proportional to the new content: in v3, rewriting 53+
-  needles hit the 2,048-token output cap and the cut-off reply was rejected. To prune notes, replace
-  the notes block by its id; it keeps its header and stays the notes block.
+  needles hit the 2,048-token output cap and the cut-off reply was rejected.
+- v5: the notes block is kept by the protocol itself. 27B ignored "append only" in v4 and rebuilt the
+  whole notes block every event ("delete 2..12" over the notes plus a note re-copying every needle),
+  which hit the output cap at 384 needles (K8-C48). Now a delete never removes the notes block (a
+  range over it skips it), a replace of the notes block is read as a note, and a note only adds lines
+  that the notes block does not hold yet. The notes block is labelled as such in the context view.
 - Conflicts within one valid reply are resolved, not rejected: a block both replaced and deleted is
   kept with its replacement, a block replaced twice keeps the last text; both are reported. Several
   notes in one reply are appended in order.
@@ -36,8 +40,8 @@ NOTES_HEADER = "[NOTES kept by context management]"
 
 # Bump when EDIT_INSTRUCTIONS or the edit semantics change; logged per episode.
 # v1 = first pilots; v2 = says what to keep; v3 = all-or-nothing replies + notes block;
-# v4 = notes are append-only.
-EDIT_PROMPT_VERSION = "edit-v4"
+# v4 = notes are append-only; v5 = notes block can't be deleted or rewritten, appends are deduplicated.
+EDIT_PROMPT_VERSION = "edit-v5"
 
 EDIT_INSTRUCTIONS = """\
 The context is shown as numbered blocks. It is close to its size limit, so free space by editing it.
@@ -53,9 +57,9 @@ Allowed edits (blocks 0 and 1 cannot be edited):
 - {"op": "delete", "ids": [<block ids>]} removes blocks.
 - {"op": "delete", "from": <first id>, "to": <last id>} removes a run of blocks (both ends included).
 - {"op": "replace", "id": <block id>, "text": "<new text>"} rewrites one block.
-- {"op": "note", "text": "<text>"} appends text to the notes block, kept right after block 1 (it is
-  created on first use). Only write what is new; earlier notes stay. To prune the notes, replace the
-  notes block by its id.
+- {"op": "note", "text": "<text>"} adds lines to the notes block, kept right after block 1 (it is
+  created on first use). The notes block is always kept: it cannot be deleted, and lines already in
+  it are never added twice, so only note lines that are new. Never copy the existing notes again.
 Your reply is applied as a whole: if any edit is invalid (e.g. it names block 0 or 1), none of your
 edits are applied. Do not answer the task here.
 Reply with only one JSON object: {"edits": [ ... ]}"""
@@ -74,9 +78,14 @@ class EditResult:
     error: str | None
 
 
+def _label(i: int, m: dict) -> str:
+    kind = "notes, always kept" if i >= PROTECTED and _is_notes(m) else m["role"]
+    return f"[block {i} | {kind}]"
+
+
 def render(messages: list[dict]) -> str:
     """The context as numbered blocks, as a peer manager sees it."""
-    return "\n\n".join(f"[block {i} | {m['role']}]\n{m['content']}" for i, m in enumerate(messages))
+    return "\n\n".join(f"{_label(i, m)}\n{m['content']}" for i, m in enumerate(messages))
 
 
 def index(messages: list[dict], preview: int = 80) -> str:
@@ -84,7 +93,7 @@ def index(messages: list[dict], preview: int = 80) -> str:
     lines = []
     for i, m in enumerate(messages):
         text = " ".join(m["content"].split())
-        lines.append(f"[block {i} | {m['role']}] {text[:preview]}")
+        lines.append(f"{_label(i, m)} {text[:preview]}")
     return "\n".join(lines)
 
 
@@ -174,6 +183,23 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
             rejected.append(f"unknown edit {str(edit)[:80]}")
     if rejected:
         return EditResult([], "rejected whole reply: " + "; ".join(rejected + warnings))
+    # v5: the notes block is kept by the protocol. Deletes skip it; a replace of it is read as a note.
+    notes_idx = next((i for i, m in enumerate(messages) if i >= PROTECTED and _is_notes(m)), None)
+    if notes_idx is not None and notes_idx in deletes:
+        deletes.discard(notes_idx)
+        warnings.append(f"the notes block (block {notes_idx}) is never deleted; skipped it")
+        for a in applied:
+            if a["op"] == "delete":
+                a["ids"] = [i for i in a["ids"] if i != notes_idx]
+        applied = [a for a in applied if a["op"] != "delete" or a["ids"]]
+    if notes_idx is not None and notes_idx in replaces:
+        text = replaces.pop(notes_idx)
+        notes.insert(0, text.removeprefix(NOTES_HEADER).lstrip("\n"))
+        warnings.append(f"replace of the notes block (block {notes_idx}) read as a note")
+        for a in applied:
+            if a["op"] == "replace" and a["id"] == notes_idx:
+                a.update(op="note", from_replace=True)
+                del a["id"]
     # A replacement is a deliberate "keep this": a delete in the same reply skips that block.
     conflicts = deletes & replaces.keys()
     if conflicts:
@@ -187,22 +213,30 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
     for i, m in enumerate(messages):
         if i in deletes:
             continue
-        is_notes = i >= PROTECTED and _is_notes(m)
         if i in replaces:
-            text = replaces[i]
-            # Replacing the notes block prunes it; it stays the notes block.
-            if is_notes and not text.startswith(NOTES_HEADER):
-                text = f"{NOTES_HEADER}\n{text}"
-            m = {**m, "content": text}
-        if is_notes and notes_at is None:
+            m = {**m, "content": replaces[i]}
+        if i == notes_idx:
             notes_at = len(kept)
         kept.append(m)
     if notes:
-        added = "\n".join(notes)
-        if notes_at is None:
-            kept.insert(PROTECTED, {"role": "user", "content": f"{NOTES_HEADER}\n{added}"})
-        else:
+        held = kept[notes_at]["content"].split("\n")[1:] if notes_at is not None else []
+        seen = {line.strip() for line in held if line.strip()}
+        added, duplicates = [], 0
+        for line in "\n".join(notes).split("\n"):
+            key = line.strip()
+            if not key:
+                continue
+            if key in seen:
+                duplicates += 1
+                continue
+            seen.add(key)
+            added.append(line)
+        if duplicates:
+            warnings.append(f"note: dropped {duplicates} lines already in the notes block")
+        if added and notes_at is None:
+            kept.insert(PROTECTED, {"role": "user", "content": "\n".join([NOTES_HEADER, *added])})
+        elif added:
             block = kept[notes_at]
-            kept[notes_at] = {**block, "content": f"{block['content']}\n{added}"}
+            kept[notes_at] = {**block, "content": "\n".join([block["content"], *added])}
     messages[:] = kept
     return EditResult(applied, "; ".join(warnings) or None)
