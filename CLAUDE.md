@@ -376,6 +376,17 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     full retention is impossible; a manager can at best keep a share of the SET lines. 27B keeps none.
   - Next: round 7 = KV R520 (environment pressure 0.85: management is triggered by the actor's
     replies, but all values fit), 2B, none vs peer_27b, seeds 42-45.
+- Round 7: KV R520 (2026-10-21, job 30070468, 7.3 min). none 0.00 on all 4 (3 finish the stream
+  with every value still in context, peak ~28.6K; s45 hits the wall). peer_27b 0.00 / 0.00 / 0.00 /
+  0.25; one event per episode, again `delete 2-9` with no note.
+  - The actor is the floor: 2B's GET answers are malformed and invented
+    (`<<<ANSWER K00009=aa978ddb>>>` instead of the 24-word value + `#hash`), even with all values in
+    context. 2B can answer KV R130 (1.00) but not R520. KV cannot measure management with a 2B actor.
+  - Larger actors cannot share the A40 with the vLLM 27B-FP8 manager, so peer_27b with 4B/9B needs
+    the llama.cpp stack (Ruthvik, #2) or a second GPU. What vLLM can still do on one A40: 4B/9B with
+    none / self / peer_same.
+  - Next: round 8 = 4B and 9B (bf16, alone on an A40, `max_len` 81,920), none / self / peer_same,
+    KV R520 + Needle K4-C24, seeds 42-45 (job 30070484, `baseline_smoke.sbatch` dd57739).
 
 ## Dev
 
