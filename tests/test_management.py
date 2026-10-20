@@ -211,8 +211,8 @@ def test_v5_27b_rebuild_pattern_keeps_notes_and_drops_duplicates():
 def test_v5_context_view_labels_the_notes_block():
     messages = blocks(2)
     management.apply_edits(messages, [{"op": "note", "text": "n1"}])
-    assert "[block 2 | notes, always kept]" in management.render(messages)
-    assert "[block 2 | notes, always kept]" in management.index(messages)
+    assert "[block 2 | notes]" in management.render(messages)
+    assert "[block 2 | notes]" in management.index(messages)
 
 
 def test_instructions_offer_notes_and_say_replies_are_atomic():

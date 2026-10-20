@@ -56,7 +56,10 @@ and Needle K4-C4 at seed 42. No-management baselines for 0.8B/2B/4B have run (re
   - **edit-v6 (2026-10-20):** same semantics as v5; the instructions now say to note the needed lines
     from every block before deleting it (v5's "never copy the existing notes again" made 27B stop
     noting after the first event).
-  - `EDIT_PROMPT_VERSION` (now `edit-v6`) is logged in `episode.json` for every managed episode.
+  - **edit-v7 (2026-10-20):** v6 semantics; the context label is just `notes` and the instructions say
+    the notes block holds only what the editor writes and a deleted block is gone. Under v5/v6 27B
+    wrote one note and then only deleted ("always kept" read as "saved for me").
+  - `EDIT_PROMPT_VERSION` (now `edit-v7`) is logged in `episode.json` for every managed episode.
 - Trigger: before a turn, when the live context exceeds 18,432 o200k tokens (60% of the 30,720 wall).
 - `self`: the actor gets the edit request appended to its own conversation (it already holds the full
   text, so it sees block ids with short previews). `peer_same` / `peer_27b`: a separate manager session
