@@ -329,6 +329,23 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - All episodes finish the stream. Manager cost K8-C48 313-365K vs actor 864-951K.
   - Caution: v5-v7 were tuned on seeds 46-49. **v7 is now frozen**; next rounds evaluate it on other
     seeds and conditions instead of tuning further.
+- Round 4: frozen edit-v7 on held-out seeds 42-45 (2026-10-21, job 30069159, 139c19e; 2B actor,
+  none / self / peer_same / peer_27b, K4-C24 + K8-C48, 87.4 min, 32 episodes completed).
+
+  | level | none | self | peer_same | peer_27b (s42 / 43 / 44 / 45) |
+  |---|---|---|---|---|
+  | K4-C24 | 0.33 | 0.33 | 0.375 / 0.375 / 0.33 / 0.375 | 1.00 / 1.00 / 1.00 / 1.00 |
+  | K8-C48 | 0.15 | 0.17 | 0.17 / 0.15 / 0.15 / 0.15 | 0.25 / 0.31 / 0.33 / 0.23 |
+
+  Paired vs `none`, v7 (peer_27b pooled over held-out s42-45 and tuning s46-49, n = 8):
+  - K4-C24 peer_27b: +0.64 (bootstrap 95% CI +0.59 to +0.67), 8/8 positive, sign test p = 0.004.
+    Held-out seeds alone: 1.00 on all four, so no sign that v7 overfit s46-49.
+  - K8-C48 peer_27b: +0.17 (CI +0.13 to +0.22), 8/8 positive, p = 0.004. Still loses most needles
+    (some events delete without noting; occasional 4,096 caps).
+  - 2B self: +0.00 (K4-C24) / +0.02 (K8-C48); 2B peer_same: +0.03 / +0.01 (n = 4 each). Same-size
+    management does not help 2B. 2B peer_same now writes long notes and hits the 4,096 cap in 2-3
+    of 4 events; 2B self edits mostly apply but free little.
+  - Next: round 5 = same grid with the 0.8B actor (fits beside 27B at util 0.17).
 
 ## Dev
 
