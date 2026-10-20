@@ -308,6 +308,14 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - K4-C24 is unchanged in distribution (mean 0.79 both versions).
   - Next (v6): instruct "before deleting a block with needed lines, note those lines from that
     block in the same reply; repeats are dropped automatically", and rerun the same cells.
+- Round 2: edit-v6 (2026-10-20, job 30069061, af240e3; instruction "note needed lines from every
+  block before deleting it, every time; lines already in notes are dropped automatically"; peer_27b
+  only, same instances; 43.4 min). **Worse:** K4-C24 0.375 on all 4 seeds, K8-C48 0.167 on all 4.
+  27B wrote one note at the first event (chunks 0-4) and afterwards only deleted (`delete 3-12`, no
+  note) in every event. No caps, all events applied. Hypothesis: the label "notes, always kept" and
+  "always kept" in the instructions read as "needed lines are saved for me".
+- Round 3: edit-v7 (job 30069142, 139c19e): label just `notes`; instructions say the notes block
+  holds only what the editor writes and a deleted block is gone for good. Same cells.
 
 ## Dev
 
