@@ -18,6 +18,9 @@ from ctxmgr.tasks.core import BUDGET, RESERVE, UPSTREAM_COMMIT
 from .agents import ChatAgent, ServerRejected
 from .management import EDIT_PROMPT_VERSION
 
+MAX_TURNS_PER_OP = 2
+MAX_TURNS_SLACK = 10
+
 
 def _repo_commit() -> str | None:
     try:
@@ -49,9 +52,15 @@ def run_episode(
     manifest = json.loads((instance_dir / "manifest.json").read_text(encoding="utf-8"))
 
     agent.wall = BUDGET - RESERVE
+    # Safety stop. Without management the budget wall ends an actor that never writes the READY
+    # marker; with management the context stays small, so such an actor loops forever (2B on KV R1000
+    # under peer_27b ran 53,920 turns in job 30069167). Ends as `max_steps`, which is recorded.
+    max_turns = MAX_TURNS_PER_OP * manifest["n_ops"] + MAX_TURNS_SLACK
     terminated_by, error = None, None
     try:
-        result = run(agent, instance_dir, budget=BUDGET, reserve=RESERVE, out_dir=out)
+        result = run(
+            agent, instance_dir, budget=BUDGET, reserve=RESERVE, out_dir=out, max_turns=max_turns
+        )
         terminated_by = result["terminated_by"]
     except ServerRejected as rejected:
         # ContextBench writes no result.json when the agent raises; keep what we know.
@@ -70,6 +79,7 @@ def run_episode(
         "reserve": RESERVE,
         "manager_trigger_o200k": getattr(agent, "trigger", None),
         "manager_max_tokens": getattr(agent, "manager_max_tokens", None),
+        "max_turns": max_turns,
         "served_max_len": served_max_len,
         "prompt_version": prompt_version,
         "edit_prompt_version": EDIT_PROMPT_VERSION if condition != "none" else None,

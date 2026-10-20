@@ -108,3 +108,23 @@ def test_turn_past_the_wall_is_not_sent_to_the_server(tmp_path):
     assert len(completions.requests) == result["n_turns"] - 1
     calls = [json.loads(line) for line in (out / "calls.jsonl").read_text().splitlines()]
     assert max(c["prompt_tokens_o200k"] for c in calls) <= 32768 - 2048
+
+
+class NeverReady(FakeCompletions):
+    """Answers but never writes the READY marker, like 2B in the GET phase of KV R1000."""
+
+    def create(self, *, model, messages, **kwargs):
+        reply = super().create(model=model, messages=messages, **kwargs)
+        reply.choices[0].message.content = "ok"
+        return reply
+
+
+def test_actor_that_never_advances_stops_at_max_turns(tmp_path):
+    instance, _ = kv_instance(tmp_path)
+    out = tmp_path / "run"
+    outcome = run_episode(fake_agent(NeverReady()), instance, out, condition="none")
+    episode = outcome["episode"]
+    assert episode["terminated_by"] == "max_steps"
+    n_ops = json.loads((instance / "manifest.json").read_text())["n_ops"]
+    assert episode["max_turns"] == 2 * n_ops + 10
+    assert len(list((out / "context_snapshots").glob("turn-*.json"))) == episode["max_turns"]
