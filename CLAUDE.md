@@ -387,6 +387,21 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     none / self / peer_same.
   - Next: round 8 = 4B and 9B (bf16, alone on an A40, `max_len` 81,920), none / self / peer_same,
     KV R520 + Needle K4-C24, seeds 42-45 (job 30070484, `baseline_smoke.sbatch` dd57739).
+  Result (1 h 49 min, 48 episodes; official / lenient KV per `scripts/lenient_kv.py`, which ignores
+  the `#hash` suffix, punctuation and case; means over s42-45):
+
+  | | KV R520 none | KV self | KV peer_same | Needle K4-C24 none | Needle self | Needle peer_same |
+  |---|---|---|---|---|---|---|
+  | 4B | 0.25 / **1.00** | 0.06 / 0.14 | 0.15 / 0.27 | 0.33 | 0.33 | 0.31 |
+  | 9B | 0.00 / **0.97** | 0.14 / 0.27 | 0.03 / 0.03 | 0.31 | 0.17 | 0.23 |
+
+  - Without management 4B and 9B recall nearly every KV R520 value; the official reward is ~0 only
+    because they drop the `#hash` suffix of the value (issue #3 format confound, now quantified).
+  - Same-size management **hurts** on KV R520 (lenient 1.00 -> 0.03-0.27): the manager deletes SET
+    batches that still hold queried values.
+  - Needle K4-C24: 4B/9B self and peer_same finish more of the stream for 9B (submit at turn 24) but
+    wipe needles (0.17); no condition beats none.
+  - Next: round 9 = 4B/9B, KV R1000 (pressure > 1, management needed), none / self / peer_same.
 
 ## Dev
 
