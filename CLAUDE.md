@@ -346,6 +346,22 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     management does not help 2B. 2B peer_same now writes long notes and hits the 4,096 cap in 2-3
     of 4 events; 2B self edits mostly apply but free little.
   - Next: round 5 = same grid with the 0.8B actor (fits beside 27B at util 0.17).
+- Round 5: frozen edit-v7 with the **0.8B actor** (2026-10-21, job 30069161, seeds 42-45,
+  K4-C24 + K8-C48, 66.1 min, 32 episodes completed).
+
+  | level | none | self | peer_same | peer_27b (s42 / 43 / 44 / 45) | 2B peer_27b (round 4) |
+  |---|---|---|---|---|---|
+  | K4-C24 | 0.33 | 0.33 | 0.33 | 0.79 / 1.00 / 1.00 / 0.79 (0.90) | 1.00 ×4 |
+  | K8-C48 | 0.17 | 0.17 | 0.17 | 0.25 / 0.31 / 0.33 / 0.23 (0.28) | identical values |
+
+  - 0.8B self / peer_same: almost no valid edit replies ("no JSON object", "missing 'edits' list"),
+    so they equal none.
+  - peer_27b with 0.8B is nearly identical to 2B; on K8-C48 the four rewards match 2B exactly. On
+    Needle under peer management the actor only replies READY and the manager decides what survives,
+    so **Needle does not test actor capability in peer conditions**; actor size barely matters.
+    KV (the actor must answer GETs from what was kept) is the task where actor and manager interact.
+  - Next: round 6 = KV with v7 (2B actor, none vs peer_27b, R1000 + R2000, seeds 42-45). Under v4,
+    27B deleted all SET batches without noting values (0.07).
 
 ## Dev
 
