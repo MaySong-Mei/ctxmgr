@@ -316,6 +316,19 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   "always kept" in the instructions read as "needed lines are saved for me".
 - Round 3: edit-v7 (job 30069142, 139c19e): label just `notes`; instructions say the notes block
   holds only what the editor writes and a deleted block is gone for good. Same cells.
+  Result (78.1 min): **best version so far.**
+
+  | level | none | v4 (s46-49) | v6 | v7 (s46 / 47 / 48 / 49) |
+  |---|---|---|---|---|
+  | K4-C24 | 0.33 | 0.79 | 0.375 | 1.00 / 1.00 / 0.79 / 1.00 (mean 0.95) |
+  | K8-C48 | 0.15 | 0.35 | 0.167 | 0.42 / 0.33 / 0.25 / 0.42 (mean 0.35) |
+
+  - 27B notes again: K4-C24 s46 noted 20/20/60/20 needles over its 4 events (the 60 includes repeats,
+    dropped by dedup). K8-C48 s46: 12 events, notes in 5 (40/80/32/108/40 needles), none in 7, so
+    needles are still lost there; 3 replies over all K8-C48 episodes hit the 4,096 cap.
+  - All episodes finish the stream. Manager cost K8-C48 313-365K vs actor 864-951K.
+  - Caution: v5-v7 were tuned on seeds 46-49. **v7 is now frozen**; next rounds evaluate it on other
+    seeds and conditions instead of tuning further.
 
 ## Dev
 
