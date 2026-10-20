@@ -23,7 +23,7 @@ source slurm/lib.sh
 
 MODELS="${MODELS:-${MODEL:-Qwen/Qwen3.5-2B}}"
 LEVELS="${LEVELS:-kv_store:R130 needle_retention:K4-C4}"
-SEED="${SEED:-42}"
+SEEDS="${SEEDS:-${SEED:-42}}"
 # Conditions served by one model: none, self, peer_same (peer_27b needs a second server).
 CONDITIONS="${CONDITIONS:-none}"
 TRIGGER="${TRIGGER:-18432}"
@@ -36,7 +36,7 @@ PORT=$((20000 + SLURM_JOB_ID % 10000))
 J="${SLURM_JOB_ID}"
 RUNS="${PROJECT_DIR}/runs/baseline-${J}"
 
-echo "host=$(hostname) job=${J} models=${MODELS} conditions=${CONDITIONS} trigger=${TRIGGER} max_len=${MAX_LEN} levels=${LEVELS} seed=${SEED}"
+echo "host=$(hostname) job=${J} models=${MODELS} conditions=${CONDITIONS} trigger=${TRIGGER} max_len=${MAX_LEN} levels=${LEVELS} seeds=${SEEDS}"
 echo "commit=$(git rev-parse --short HEAD) runs=${RUNS}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
@@ -44,13 +44,15 @@ uv sync --locked --group serve --quiet || exit 1
 
 failed=()
 # Generate each instance once; every model sees identical streams.
-for item in ${LEVELS}; do
-    family="${item%%:*}" level="${item##*:}"
-    name="${family}-${level}-s${SEED}"
-    if ! uv run python -m ctxmgr.tasks generate "${family}" --level "${level}" --seed "${SEED}" \
-        --out "${RUNS}/instances/${name}" > /dev/null; then
-        failed+=("${name}:generate")
-    fi
+for SEED in ${SEEDS}; do
+    for item in ${LEVELS}; do
+        family="${item%%:*}" level="${item##*:}"
+        name="${family}-${level}-s${SEED}"
+        if ! uv run python -m ctxmgr.tasks generate "${family}" --level "${level}" --seed "${SEED}" \
+            --out "${RUNS}/instances/${name}" > /dev/null; then
+            failed+=("${name}:generate")
+        fi
+    done
 done
 
 for MODEL in ${MODELS}; do
@@ -62,21 +64,23 @@ for MODEL in ${MODELS}; do
         # A model that cannot start is a result; keep going with the others.
         stop_server "${SERVER_PID}"; failed+=("${TAG}:server"); continue
     fi
-    for item in ${LEVELS}; do
-        family="${item%%:*}" level="${item##*:}"
-        name="${family}-${level}-s${SEED}"
-        instance="${RUNS}/instances/${name}"
-        [[ -d "${instance}" ]] || continue
-        # peer_same reuses this server as a separate manager session (no second copy of weights).
-        for cond in ${CONDITIONS}; do
-            echo "===== ${TAG} ${cond} ${name} ====="
-            if ! uv run python -m ctxmgr.harness run "${instance}" \
-                --out "${RUNS}/${TAG}/${cond}/${name}" --condition "${cond}" \
-                --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}" \
-                --served-max-len "${MAX_LEN}" --precision "${PRECISION:-bf16}" \
-                --trigger "${TRIGGER}"; then
-                failed+=("${TAG}/${cond}/${name}:run")
-            fi
+    for SEED in ${SEEDS}; do
+        for item in ${LEVELS}; do
+            family="${item%%:*}" level="${item##*:}"
+            name="${family}-${level}-s${SEED}"
+            instance="${RUNS}/instances/${name}"
+            [[ -d "${instance}" ]] || continue
+            # peer_same reuses this server as a separate manager session (no second weight copy).
+            for cond in ${CONDITIONS}; do
+                echo "===== ${TAG} ${cond} ${name} ====="
+                if ! uv run python -m ctxmgr.harness run "${instance}" \
+                    --out "${RUNS}/${TAG}/${cond}/${name}" --condition "${cond}" \
+                    --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}" \
+                    --served-max-len "${MAX_LEN}" --precision "${PRECISION:-bf16}" \
+                    --trigger "${TRIGGER}"; then
+                    failed+=("${TAG}/${cond}/${name}:run")
+                fi
+            done
         done
     done
     gpu_mem
