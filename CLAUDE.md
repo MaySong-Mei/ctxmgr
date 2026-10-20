@@ -290,6 +290,24 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - K8-C48 (384 needles): peer_27b 0.35 vs 0.15 on all 4 seeds (identical outcomes), but every
     episode still hits the budget wall: 3 manager replies per episode hit the 4,096 output cap
     because 27B rewrites the whole notes block. 4/4 positive, p = 0.06.
+- Round 1 of the auto loop: edit-v5 (2026-10-20, job 30068993, `may/track2-baseline` 60c4848; notes
+  block kept by the protocol: deletes skip it, replace of it = note, notes deduplicated; instructions
+  said "never copy the existing notes again"; actor `max_len` 81,920, manager 49,152; 56.6 min).
+
+  | level | none (s46–49) | peer_27b v5 (s46 / 47 / 48 / 49) | v4 for reference |
+  |---|---|---|---|
+  | K4-C24 | 0.33 ×4 | 1.00 / 0.79 / 0.79 / 0.58 | 0.79 / 1.00 / 0.58 / 1.00 |
+  | K8-C48 | 0.15 ×4 | 0.27 / 0.25 / 0.23 / 0.29 | 0.35 ×4 |
+
+  - The actor `max_len` fix worked: every `none` episode now ends on the o200k wall (s49 was
+    `server_rejected` at 49,152 before).
+  - v5 removed the output-cap failures (0 capped replies; K8-C48 now finishes the stream, 48 turns,
+    10–11 events, all applied) but K8-C48 reward fell. In s46 only 2 of 10 events wrote a note
+    (turn 6: chunks 0–4; turn 26: chunks 20–24); the other 8 deleted chunk blocks without noting
+    their needles. "Never copy the existing notes again" seems to have suppressed noting altogether.
+  - K4-C24 is unchanged in distribution (mean 0.79 both versions).
+  - Next (v6): instruct "before deleting a block with needed lines, note those lines from that
+    block in the same reply; repeats are dropped automatically", and rerun the same cells.
 
 ## Dev
 
