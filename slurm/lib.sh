@@ -56,3 +56,10 @@ for s in socks:
 print(" ".join(str(s.getsockname()[1]) for s in socks))
 PY
 }
+
+# check_model <port> <model>: fail unless the server on <port> serves <model> (guards against
+# talking to another job's server).
+check_model() {
+    if curl -sf "http://127.0.0.1:$1/v1/models" | grep -q "\"$2\""; then return 0; fi
+    echo "port $1 does not serve $2; aborting"; return 1
+}

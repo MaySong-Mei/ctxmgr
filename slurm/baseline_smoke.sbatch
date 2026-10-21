@@ -60,7 +60,7 @@ for MODEL in ${MODELS}; do
     echo "######## ${MODEL} ########"
     log="logs/vllm-${J}-${TAG}.log"
     start_server "${MODEL}" "${PORT}" "${GPU_UTIL}" "${MAX_LEN}" "${log}" --max-num-seqs "${MAX_NUM_SEQS}"
-    if ! wait_healthy "${PORT}" "${SERVER_PID}" "${log}"; then
+    if ! { wait_healthy "${PORT}" "${SERVER_PID}" "${log}" && check_model "${PORT}" "${MODEL}"; }; then
         # A model that cannot start is a result; keep going with the others.
         stop_server "${SERVER_PID}"; failed+=("${TAG}:server"); continue
     fi
