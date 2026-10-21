@@ -460,6 +460,13 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     under FP8), so nothing applied; as `peer_same` 0 of 104. The gap is at least partly a
     self-mode format slip. edit-v8 (`may/track2-baseline` 014daa7) reads a bare object as one edit
     (logged `wrapped_bare_edit`); next: rerun 27B self under v8 to separate role from format.
+  - v8 rerun of 27B self (job 30118842, H200 bf16, 2 h 19 min): all 86 events now apply (71 via
+    the bare-object path), yet Needle K4-C24 0.36 (v7 0.29; peer_same 0.89), K8-C48 0.15 (peer_same
+    0.34), KV R520 0.27 (= peer_same). The format fix does not close the gap. Mechanism: as `self`
+    27B emits **one edit per reply** (K4-C24: 21 delete-only, 4 note-only events; one note, then
+    deletes that drop later needles), as `peer_same` it emits a plan (17 delete+note, 5
+    delete+replace, 6 delete-only). So role separation matters for 27B, through how complete each
+    management reply is, not through edit validity.
 
 ## Dev
 
