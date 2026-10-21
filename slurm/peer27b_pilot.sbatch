@@ -56,12 +56,24 @@ for SEED in ${SEEDS}; do
     done
 done
 
+# SPLIT_GPUS=1 (job with 2 GPUs on one node, e.g. -p gpu --gpus-per-node=2 -N1): manager on GPU 0,
+# actor on GPU 1, each with its own util. Default: both co-located on the job's single GPU.
+SPLIT_GPUS="${SPLIT_GPUS:-0}"
+MANAGER_GPU="" ACTOR_GPU=""
+if [[ "${SPLIT_GPUS}" == 1 ]]; then
+    read -r -a visible <<< "$(echo "${CUDA_VISIBLE_DEVICES:-0,1}" | tr , ' ')"
+    MANAGER_GPU="${visible[0]}" ACTOR_GPU="${visible[1]}"
+    echo "split: manager on GPU ${MANAGER_GPU}, actor on GPU ${ACTOR_GPU}"
+fi
+
 # The manager starts first and takes its share; the actor fits in what is left.
-start_server "${MANAGER}" "${P1}" "${BIG_UTIL}" "${MAX_LEN}" "logs/vllm-${J}-manager.log" \
+CUDA_VISIBLE_DEVICES="${MANAGER_GPU:-${CUDA_VISIBLE_DEVICES:-0}}" \
+    start_server "${MANAGER}" "${P1}" "${BIG_UTIL}" "${MAX_LEN}" "logs/vllm-${J}-manager.log" \
     --max-num-seqs "${MAX_NUM_SEQS}"
 big_pid=${SERVER_PID}
 wait_healthy "${P1}" "${big_pid}" "logs/vllm-${J}-manager.log" || { stop_server "${big_pid}"; exit 1; }
-start_server "${ACTOR}" "${P2}" "${ACTOR_UTIL}" "${ACTOR_MAX_LEN}" "logs/vllm-${J}-actor.log" \
+CUDA_VISIBLE_DEVICES="${ACTOR_GPU:-${CUDA_VISIBLE_DEVICES:-0}}" \
+    start_server "${ACTOR}" "${P2}" "${ACTOR_UTIL}" "${ACTOR_MAX_LEN}" "logs/vllm-${J}-actor.log" \
     --max-num-seqs "${MAX_NUM_SEQS}"
 actor_pid=${SERVER_PID}
 if ! wait_healthy "${P2}" "${actor_pid}" "logs/vllm-${J}-actor.log"; then
