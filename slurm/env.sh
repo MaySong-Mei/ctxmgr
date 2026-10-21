@@ -24,3 +24,6 @@ export VLLM_USE_FLASHINFER_SAMPLER=0
 # Same cause on Hopper (H200): vLLM's FP8 path uses DeepGEMM, which JIT-compiles with the CUDA
 # toolkit and kills the engine at startup (job 30085999). Use the precompiled CUTLASS FP8 kernels.
 export VLLM_USE_DEEP_GEMM=0
+# vLLM's own engine startup limit (default 600 s) is too short for a cold 27B bf16 start on H200
+# (~17 min of compile + CUDA graph capture; job 30087088). Compile caches make later starts faster.
+export VLLM_ENGINE_READY_TIMEOUT_S=3600

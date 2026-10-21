@@ -14,10 +14,11 @@ start_server() {
     SERVER_PID=$!
 }
 
-# wait_healthy <port> <pid> <log>: up to 10 min; returns 1 if the server dies or never comes up.
+# wait_healthy <port> <pid> <log>: up to WAIT_HEALTHY_S (default 1 h; a cold 27B bf16 compile + CUDA
+# graph capture on H200 took ~17 min); returns 1 if the server dies or never comes up.
 wait_healthy() {
     local port="$1" pid="$2" log="$3"
-    for _ in $(seq 1 120); do
+    for _ in $(seq 1 $(( ${WAIT_HEALTHY_S:-3600} / 5 ))); do
         if curl -sf "http://127.0.0.1:${port}/health" >/dev/null; then
             grep -E "Model loading took|GPU KV cache size" "${log}"
             return 0
