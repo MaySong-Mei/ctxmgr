@@ -442,11 +442,15 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   | 4B | Needle K4-C24 | 0.33 | 0.33 | 0.31 | **0.81** |
   | 4B | Needle K8-C48 | 0.16 | 0.16 | 0.16 | **0.31** |
   | 4B | KV R520 | 0.25 / **1.00** | 0.01 / 0.08 | 0.15 / 0.27 | 0.15 / 0.27 |
+  | 9B | Needle K4-C24 | 0.32 | 0.17 | 0.26 | **0.75** |
+  | 9B | Needle K8-C48 | 0.16 | 0.07 | 0.07 | **0.33** |
+  | 9B | KV R520 | 0.00 / **0.97** | 0.14 / 0.27 | 0.03 / 0.03 | 0.14 / 0.27 |
   | 27B | Needle K4-C24 | 0.29 | 0.29 | **0.89** | – |
   | 27B | Needle K8-C48 | 0.15 | 0.15 | **0.34** | – |
   | 27B | KV R520 | **1.00** / 1.00 | 0.27 / 0.27 | 0.27 / 0.27 | – |
 
-  Jobs 30088179 (2B), 30088182 (4B), 30088184 (27B actor); 9B rerun as 30114789.
+  Jobs 30088179 (2B), 30088182 (4B), 30114789 (9B, rerun after the port collision), 30088184 (27B
+  actor). v8 rerun of 27B self: job 30118842.
   - bf16 reproduces the FP8 picture: a 27B manager lifts small actors on Needle; same-size
     management does nothing for 2B/4B.
   - **On KV R520 every management condition hurts actors that can do the task** (4B lenient 1.00 ->
