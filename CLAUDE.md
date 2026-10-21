@@ -402,6 +402,14 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - Needle K4-C24: 4B/9B self and peer_same finish more of the stream for 9B (submit at turn 24) but
     wipe needles (0.17); no condition beats none.
   - Next: round 9 = 4B/9B, KV R1000 (pressure > 1, management needed), none / self / peer_same.
+- Round 9: 4B/9B KV R1000 (2026-10-21, job 30083525, 27 min). Official / lenient means over s42-45:
+  4B none 0 / 0, self 0 / 0 (no valid JSON), peer_same 0.06 / 0.25; 9B none 0 / 0, self 0.14 / 0.25,
+  peer_same 0.03 / 0.07. none always hits the wall at turn 6, before any GET. The managed 0.17-0.29
+  come from the last SET batch surviving the deletes; no manager notes values (same pattern as the
+  27B manager's 0.25-0.29). Copying runs with per-file scp stalled (1.7 of 26 MB in 46 min); a
+  single `tar czf - | tar xzf -` stream takes 12 s.
+- Next: round 10 = **27B-FP8 as actor** (alone on the A40, util 0.90, `max_len` 81,920), none / self
+  / peer_same (the core grid's 27B row), Needle K4-C24 + KV R520 + KV R1000, seeds 42-45.
 
 ## Dev
 
