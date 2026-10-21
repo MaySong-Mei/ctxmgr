@@ -483,8 +483,14 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     (Needle self -0.16 / -0.08, peer_same -0.07 (p 0.13) / -0.08).
   - **On KV R520 every management condition hurts actors that can do the task**: 4B -0.72 to -0.88,
     9B -0.70 to -0.95 (lenient). 0.8B can't do KV at all (0.00); 2B is noisy (0.46, mixed signs).
-  - 27B actor (n = 4): peer_same +0.59 / +0.19 on Needle (4/4, p = 0.125), self +0.00 (v8 rerun
-    0.36 / 0.15), KV -0.73 for both.
+  - 27B actor: see round 14.
+- Round 14: 27B actor seeds 46-49 (job 30136264, H200 bf16, edit-v8, 6.5 h). Pooled n = 8 (`self`
+  from edit-v8 runs 30118842 + 30136264 only): Needle K4-C24 none 0.29, self 0.38 (+0.08, 5/1,
+  p = 0.22), peer_same 0.85 (+0.56, 8/0, p = 0.008); K8-C48 none 0.15, self 0.14 (+0.00), peer_same
+  0.34 (+0.19, 8/0); KV R520 none 1.00, self 0.28 (-0.72), peer_same 0.23 (-0.77), both 0/8.
+  **Role effect at 27B, paired peer_same - self: +0.48 (K4-C24) and +0.20 (K8-C48), 8/8 seeds,
+  p = 0.008**, with edit validity equal (v8). Same weights, same edit protocol; only who issues the
+  edit request differs.
 
 ## Dev
 

@@ -17,7 +17,9 @@ RUNS = {
     "Qwen3.5-2B": ["peer27b-30088179", "peer27b-30127435"],
     "Qwen3.5-4B": ["peer27b-30088182", "peer27b-30127436"],
     "Qwen3.5-9B": ["peer27b-30114789", "peer27b-30127437"],
-    "Qwen3.5-27B": ["baseline-30088184"],
+    # Later runs overwrite earlier ones per (condition, seed): 27B `self` s42-45 comes from the
+    # edit-v8 rerun 30118842, not the v7 run 30088184 (bare-edit format slip).
+    "Qwen3.5-27B": ["baseline-30088184", "baseline-30118842", "baseline-30136264"],
 }
 LEVELS = ["needle_retention-K4-C24", "needle_retention-K8-C48", "kv_store-R520"]
 CONDS = ["none", "self", "peer_same", "peer_27b"]
