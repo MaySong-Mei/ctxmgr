@@ -53,7 +53,9 @@ On the cluster, the repo clone is at `/nfs/roberts/project/cpsc4880/$USER/ctxmgr
 1. Edit locally, commit and push to `may/track3-infra`.
 2. On the cluster: `cd .../ctxmgr && git pull && sbatch ...`. Chain dependent jobs with
    `--dependency=afterok:<id>` (e.g. a CPU download job, then a GPU job).
-3. `education_gpu` allows one submitted job per user: queue GPU work sequentially.
+3. `education_gpu` allows one submitted job per user: queue work there sequentially. The `cpsc4880`
+   account can also use the general GPU partitions (`gpu`, `gpu_h200`, ...) for multi-GPU or parallel
+   jobs; request GPUs with `-N1 --gpus-per-node=<type>:<n>` and submit via `sbatch` (see `CLAUDE.md` Compute).
 4. Monitor from a background shell loop that polls `sacct -j <id> -X -n -o State` every 60 s and
    tolerates transient SSH failures (give up after ~5 consecutive failures), then prints the job log,
    `logs/smoke-*.json` and key vLLM log lines.

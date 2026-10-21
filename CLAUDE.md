@@ -33,10 +33,22 @@ Tracks 1 and 2 must agree on the interface (task format in → context/answers o
 Branches: `<name>/<track>` (e.g. `may/track3-infra`), merged to `main` via PR.
 Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; weeks 6–8 failure analysis + 4-page NeurIPS write-up.
 
-## Compute (Yale Bouchet, `education_gpu`)
+## Compute (Yale Bouchet, account `cpsc4880`)
 
-- Enforced limit: **1 GPU per user, 1 job at a time, 24 h wall** (docs say 2 GPUs; QoS enforces 1).
-- GPUs: A5000 24 GB (32), RTX 5000 Ada 32 GB (12), A40 48 GB (4, one node).
+- The course account can submit to `education_gpu` **and** the general GPU partitions (verified
+  2026-10-20: a 2× A40 single-node job on `gpu` ran under `cpsc4880`). The 1-GPU cap is a property of
+  the `education_gpu` partition, not of the account.
+- `education_gpu`: **1 GPU per user, 1 job at a time, 24 h wall** (docs say 2 GPUs; QoS enforces 1).
+  GPUs: A5000 24 GB (32), RTX 5000 Ada 32 GB (12), A40 48 GB (4, one node).
+- General partitions (per-user QoS limits): `gpu` (A40 / A5000 / L40S / RTX 5000 Ada; ≤32 GPUs,
+  12 jobs, 2 d wall), `gpu_h100`, `gpu_h200` (≤16 GPUs, 6 jobs, 2 d), `gpu_b200`, `gpu_rtx6000`,
+  `gpu_devel` (≤2 GPUs, 1 job, 6 h). No `priority*` tiers.
+- Multi-GPU submission gotchas: request GPUs on one node (`-N1 --gpus-per-node=a40:2`); plain
+  `--gpus=2` may split them across two nodes, which breaks vLLM tensor parallelism. Use `sbatch` or
+  pass `--qos=normal`: a login-node `srun` defaults to the `interactive` QoS, which `gpu*` partitions
+  reject (`Invalid qos specification`).
+- Usage on any partition is charged to the shared `cpsc4880` fairshare, so heavy general-partition use
+  lowers classmates' priority; keep jobs sized to what the grid needs.
 - Rules of Behavior: all computation through Slurm, never on login nodes; end idle interactive sessions;
   no floods of <5-min jobs; don't split work across accounts to dodge fair-use limits; course accounts are coursework-only.
 - Storage: weights/results in project dir `/nfs/roberts/project/<course>/<user>` (backed up);
@@ -423,8 +435,9 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   requests), so manager calls would serialize, and only 2B/0.8B actors fit beside it (4B and 9B do not).
   Alternatives: 27B alone on the A40 (128K KV tokens) serving manager calls in a separate phase, or
   batching all peer_27b cells per actor.
-- Instances / pressure levels / seeds per cell → total GPU-hours under the 1-GPU limit.
-- Whether to ask course staff for a higher GPU limit.
+- Instances / pressure levels / seeds per cell → total GPU-hours. The 1-GPU limit applies only to
+  `education_gpu`; the general `gpu` partition allows a 2× A40 node (27B manager + 4B/9B actor in vLLM)
+  and parallel jobs (see Compute).
 - Prior-art check: does the CLM paper's multi-agent section already run an equivalent peer-manager
   comparison? Settle before the core grid; it decides the novelty claim.
 - Deferred per the instructor's core grid (Track 1 AGENTS.md): scheduled summarization, next-size-up
