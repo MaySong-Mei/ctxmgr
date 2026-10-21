@@ -70,7 +70,8 @@ CUDA_VISIBLE_DEVICES="${MANAGER_GPU:-${CUDA_VISIBLE_DEVICES:-0}}" \
     start_server "${MANAGER}" "${P1}" "${BIG_UTIL}" "${MAX_LEN}" "logs/vllm-${J}-manager.log" \
     --max-num-seqs "${MAX_NUM_SEQS}"
 big_pid=${SERVER_PID}
-{ wait_healthy "${P1}" "${big_pid}" "logs/vllm-${J}-manager.log" && check_model "${P1}" "${MANAGER}"; } \n    || { stop_server "${big_pid}"; exit 1; }
+{ wait_healthy "${P1}" "${big_pid}" "logs/vllm-${J}-manager.log" && check_model "${P1}" "${MANAGER}"; } \
+    || { stop_server "${big_pid}"; exit 1; }
 CUDA_VISIBLE_DEVICES="${ACTOR_GPU:-${CUDA_VISIBLE_DEVICES:-0}}" \
     start_server "${ACTOR}" "${P2}" "${ACTOR_UTIL}" "${ACTOR_MAX_LEN}" "logs/vllm-${J}-actor.log" \
     --max-num-seqs "${MAX_NUM_SEQS}"
