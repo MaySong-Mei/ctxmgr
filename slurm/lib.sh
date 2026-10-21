@@ -44,3 +44,15 @@ smoke() {
 gpu_mem() {
     nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
 }
+
+# free_ports <n>: print n distinct free TCP ports on this node. Ports derived from the job id
+# collided when two of our jobs shared a node (30088183 and 30088184 both used 28184).
+free_ports() {
+    python3 - "$1" <<'PY'
+import socket, sys
+socks = [socket.socket() for _ in range(int(sys.argv[1]))]
+for s in socks:
+    s.bind(("127.0.0.1", 0))
+print(" ".join(str(s.getsockname()[1]) for s in socks))
+PY
+}

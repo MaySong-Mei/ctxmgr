@@ -34,8 +34,7 @@ ACTOR_MAX_LEN="${ACTOR_MAX_LEN:-81920}"
 BIG_UTIL="${BIG_UTIL:-0.79}"
 ACTOR_UTIL="${ACTOR_UTIL:-0.17}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-64}"
-P1=$((20000 + SLURM_JOB_ID % 10000))
-P2=$((P1 + 1))
+read -r P1 P2 <<< "$(free_ports 2)"
 J="${SLURM_JOB_ID}"
 TAG="${ACTOR##*/}"
 RUNS="${PROJECT_DIR}/runs/peer27b-${J}"
