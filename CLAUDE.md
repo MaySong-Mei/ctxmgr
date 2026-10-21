@@ -491,6 +491,21 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   **Role effect at 27B, paired peer_same - self: +0.48 (K4-C24) and +0.20 (K8-C48), 8/8 seeds,
   p = 0.008**, with edit validity equal (v8). Same weights, same edit protocol; only who issues the
   edit request differs.
+- Round 15: Needle pressure curve, none vs peer_27b (H200 bf16, edit-v8, seeds 42-45; jobs
+  30171619 2B, 30174977 0.8B, 30174978 9B; K4-C24 / K8-C48 from the 8-seed grid). Means:
+
+  | level (env. pressure) | 0.8B none / 27B | 2B none / 27B | 9B none / 27B |
+  |---|---|---|---|
+  | K4-C4 (0.5) | 1.00 / 1.00 | 1.00 / 1.00 | 1.00 / 1.00 |
+  | K4-C8 (0.98) | 0.78 / 0.94 | 1.00 / 1.00 | 1.00 / 1.00 |
+  | K4-C24 (2.9) | 0.33 / 0.97 | 0.33 / 1.00 | 0.32 / 0.80 |
+  | K8-C48 (6.0) | 0.17 / 0.30 | 0.15 / 0.31 | 0.16 / 0.32 |
+  | K8-C60 (7.5) | 0.13 / 0.21 | 0.12 / 0.27 | 0.12 / 0.25 |
+  | K4-C96 (11.7) | 0.05 / 0.25 | 0.08 / 0.35 | 0.08 / 0.26 |
+
+  Management never hurts below the budget and the 27B manager stays above none at every pressure;
+  needle density matters (K8 levels below K4-C96). Figures: `docs/figures/needle_pressure_curve.png`
+  (`scripts/plot_pressure.py`), `docs/figures/grid_diff_vs_none.png` (`scripts/plot_grid.py`).
 
 ## Dev
 
