@@ -34,44 +34,49 @@ def score(run, actor, cond, level, seed):
     return json.loads((d / "score.json").read_text())["official"]["reward"]
 
 
-rows = []
-for actor, runs in RUNS.items():
-    for level in LEVELS:
-        data = {c: {} for c in CONDS}
-        for run in runs:
+def main():
+    rows = []
+    for actor, runs in RUNS.items():
+        for level in LEVELS:
+            data = {c: {} for c in CONDS}
+            for run in runs:
+                for cond in CONDS:
+                    for seed in range(42, 50):
+                        v = score(run, actor, cond, level, seed)
+                        if v is not None:
+                            data[cond][seed] = v
             for cond in CONDS:
-                for seed in range(42, 50):
-                    v = score(run, actor, cond, level, seed)
-                    if v is not None:
-                        data[cond][seed] = v
-        for cond in CONDS:
-            if not data[cond]:
-                continue
-            mean = st.mean(data[cond].values())
-            if cond == "none":
-                rows.append((actor, level, cond, len(data[cond]), mean, None, None, None))
-                continue
-            seeds = sorted(set(data[cond]) & set(data["none"]))
-            diffs = [data[cond][s] - data["none"][s] for s in seeds]
-            pos, neg = sum(d > 0 for d in diffs), sum(d < 0 for d in diffs)
-            n = pos + neg
-            k = max(pos, neg)
-            p = min(1.0, 2 * sum(comb(n, i) for i in range(k, n + 1)) / 2**n) if n else 1.0
-            random.seed(0)
-            boots = sorted(st.mean(random.choices(diffs, k=len(diffs))) for _ in range(10000))
-            rows.append(
-                (actor, level, cond, len(seeds), mean, st.mean(diffs), (boots[250], boots[9750]), (pos, neg, p))
+                if not data[cond]:
+                    continue
+                mean = st.mean(data[cond].values())
+                if cond == "none":
+                    rows.append((actor, level, cond, len(data[cond]), mean, None, None, None))
+                    continue
+                seeds = sorted(set(data[cond]) & set(data["none"]))
+                diffs = [data[cond][s] - data["none"][s] for s in seeds]
+                pos, neg = sum(d > 0 for d in diffs), sum(d < 0 for d in diffs)
+                n = pos + neg
+                k = max(pos, neg)
+                p = min(1.0, 2 * sum(comb(n, i) for i in range(k, n + 1)) / 2**n) if n else 1.0
+                random.seed(0)
+                boots = sorted(st.mean(random.choices(diffs, k=len(diffs))) for _ in range(10000))
+                rows.append(
+                    (actor, level, cond, len(seeds), mean, st.mean(diffs), (boots[250], boots[9750]), (pos, neg, p))
+                )
+
+    print("| actor | level | condition | n | mean | diff vs none | 95% CI | +/- | sign p (2-sided) |")
+    print("|---|---|---|---|---|---|---|---|---|")
+    for actor, level, cond, n, mean, diff, ci, test in rows:
+        a = actor.replace("Qwen3.5-", "")
+        lv = level.replace("needle_retention-", "Needle ").replace("kv_store-", "KV ")
+        if diff is None:
+            print(f"| {a} | {lv} | none | {n} | {mean:.2f} | | | | |")
+        else:
+            print(
+                f"| {a} | {lv} | {cond} | {n} | {mean:.2f} | {diff:+.2f} | "
+                f"[{ci[0]:+.2f}, {ci[1]:+.2f}] | {test[0]}/{test[1]} | {test[2]:.3f} |"
             )
 
-print("| actor | level | condition | n | mean | diff vs none | 95% CI | +/- | sign p (2-sided) |")
-print("|---|---|---|---|---|---|---|---|---|")
-for actor, level, cond, n, mean, diff, ci, test in rows:
-    a = actor.replace("Qwen3.5-", "")
-    lv = level.replace("needle_retention-", "Needle ").replace("kv_store-", "KV ")
-    if diff is None:
-        print(f"| {a} | {lv} | none | {n} | {mean:.2f} | | | | |")
-    else:
-        print(
-            f"| {a} | {lv} | {cond} | {n} | {mean:.2f} | {diff:+.2f} | "
-            f"[{ci[0]:+.2f}, {ci[1]:+.2f}] | {test[0]}/{test[1]} | {test[2]:.3f} |"
-        )
+
+if __name__ == "__main__":
+    main()
