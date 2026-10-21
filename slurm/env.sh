@@ -21,3 +21,6 @@ mkdir -p "${HF_HOME}" "${UV_CACHE_DIR}" "${VLLM_CACHE_ROOT}" "${TRITON_CACHE_DIR
 # No nvcc on GPU nodes (cluster CUDA modules top out at 12.9; our torch is cu13), so FlashInfer's
 # JIT-compiled sampler fails. Use vLLM's PyTorch sampler; attention uses FLASH_ATTN (no JIT).
 export VLLM_USE_FLASHINFER_SAMPLER=0
+# Same cause on Hopper (H200): vLLM's FP8 path uses DeepGEMM, which JIT-compiles with the CUDA
+# toolkit and kills the engine at startup (job 30085999). Use the precompiled CUTLASS FP8 kernels.
+export VLLM_USE_DEEP_GEMM=0
