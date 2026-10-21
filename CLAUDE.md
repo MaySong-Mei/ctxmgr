@@ -506,6 +506,10 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   Management never hurts below the budget and the 27B manager stays above none at every pressure;
   needle density matters (K8 levels below K4-C96). Figures: `docs/figures/needle_pressure_curve.png`
   (`scripts/plot_pressure.py`), `docs/figures/grid_diff_vs_none.png` (`scripts/plot_grid.py`).
+- Round 16: KV R130 / R260, 4B and 9B, none vs peer_27b (jobs 30179678/9, H200 bf16, seeds 42-45,
+  6 min each). Pressure 0.24 / 0.44: the trigger is never reached (0 events), so peer_27b = none
+  (lenient 4B 1.00 / 1.00, 9B 1.00 / 0.99). KV curve: management changes nothing until it fires,
+  and as soon as it fires (R520, R1000) lenient recall drops to ~0.25-0.28 for every manager.
 
 ## Dev
 
