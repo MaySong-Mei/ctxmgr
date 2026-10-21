@@ -474,6 +474,17 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   unchanged. A later trigger removes the KV harm only for 4B same-size management; the 27B manager
   still deletes value-holding SET batches whenever it runs (~0.28), and Needle gains shrink a little.
   The trigger matters but does not change the main conclusions; keep 18,432 as the default.
+- Round 13: seeds 46-49 for 2B/4B/9B and 0.8B on seeds 42-49 (jobs 30127434-37, H200 bf16,
+  edit-v8, 27-48 min each). Pooled 8-seed grid with paired tests: `docs/tables/h200_bf16_pooled.md`
+  (`scripts/pooled_grid.py`). Summary (diff vs none; all 8/8 same sign, p = 0.008 unless noted):
+  - **peer_27b on Needle helps every actor size**: K4-C24 +0.64 (0.8B), +0.67 (2B), +0.46 (4B),
+    +0.48 (9B); K8-C48 +0.14, +0.17, +0.11, +0.16.
+  - **Same-size management never helps small/mid actors** (0.8B-4B within +-0.03); for 9B it hurts
+    (Needle self -0.16 / -0.08, peer_same -0.07 (p 0.13) / -0.08).
+  - **On KV R520 every management condition hurts actors that can do the task**: 4B -0.72 to -0.88,
+    9B -0.70 to -0.95 (lenient). 0.8B can't do KV at all (0.00); 2B is noisy (0.46, mixed signs).
+  - 27B actor (n = 4): peer_same +0.59 / +0.19 on Needle (4/4, p = 0.125), self +0.00 (v8 rerun
+    0.36 / 0.15), KV -0.73 for both.
 
 ## Dev
 
