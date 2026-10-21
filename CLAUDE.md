@@ -422,6 +422,40 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   single `tar czf - | tar xzf -` stream takes 12 s.
 - Next: round 10 = **27B-FP8 as actor** (alone on the A40, util 0.90, `max_len` 81,920), none / self
   / peer_same (the core grid's 27B row), Needle K4-C24 + KV R520 + KV R1000, seeds 42-45.
+- Round 10 (job 30084447, A40, 27B-FP8 actor, 8.2 h): KV R520 none **1.00** official (27B keeps
+  the `#hash`), self 0.23, peer_same 0.14; KV R1000 none 0.00, self 0.25, peer_same 0.24; Needle
+  K4-C24 none 0.29, self 0.29, peer_same **0.90**.
+- **Move to H200** (2026-10-20): the course account can use the general `gpu*` partitions (class
+  caps per Aakash's guide: 6 GPUs on gpu/gpu_rtx6000, 32 on gpu_h200; we use 1-3). Fixes needed:
+  `VLLM_USE_DEEP_GEMM=0` (DeepGEMM FP8 JIT needs nvcc; job 30085999), 1 h startup wait (cold 27B
+  bf16 compile + CUDA graphs ~17 min; job 30087088), free ports at run time (30088183 and 30088184
+  shared a node and port 28184; the 9B job talked to the 27B server, 404s, cancelled by YCRC staff
+  after 2.6 h), and a `check_model` guard. 27B now runs in **bf16** (manager 0.55 / actor 0.38 of
+  one H200; 27B KV 355K tokens).
+- H200 bf16 grid, edit-v7, seeds 42-45, Needle official, KV official / lenient (means, n = 4):
+
+  | actor | level | none | self | peer_same | peer_27b |
+  |---|---|---|---|---|---|
+  | 2B | Needle K4-C24 | 0.33 | 0.33 | 0.38 | **1.00** |
+  | 2B | Needle K8-C48 | 0.15 | 0.17 | 0.15 | **0.33** |
+  | 2B | KV R520 | 0.00 / 0.25 | 0.08 / 0.25 | 0.03 / 0.27 | 0.06 / 0.16 |
+  | 4B | Needle K4-C24 | 0.33 | 0.33 | 0.31 | **0.81** |
+  | 4B | Needle K8-C48 | 0.16 | 0.16 | 0.16 | **0.31** |
+  | 4B | KV R520 | 0.25 / **1.00** | 0.01 / 0.08 | 0.15 / 0.27 | 0.15 / 0.27 |
+  | 27B | Needle K4-C24 | 0.29 | 0.29 | **0.89** | – |
+  | 27B | Needle K8-C48 | 0.15 | 0.15 | **0.34** | – |
+  | 27B | KV R520 | **1.00** / 1.00 | 0.27 / 0.27 | 0.27 / 0.27 | – |
+
+  Jobs 30088179 (2B), 30088182 (4B), 30088184 (27B actor); 9B rerun as 30114789.
+  - bf16 reproduces the FP8 picture: a 27B manager lifts small actors on Needle; same-size
+    management does nothing for 2B/4B.
+  - **On KV R520 every management condition hurts actors that can do the task** (4B lenient 1.00 ->
+    0.08-0.27; 27B 1.00 -> 0.27): managers delete SET batches whose values are queried later.
+  - 27B actor: peer_same 0.89 vs self 0.29 on Needle K4-C24 looks like a role-separation effect,
+    but 27B as `self` wrote a bare edit object (no `{"edits": [...]}`) in 26 of 31 events (16 of 28
+    under FP8), so nothing applied; as `peer_same` 0 of 104. The gap is at least partly a
+    self-mode format slip. edit-v8 (`may/track2-baseline` 014daa7) reads a bare object as one edit
+    (logged `wrapped_bare_edit`); next: rerun 27B self under v8 to separate role from format.
 
 ## Dev
 
