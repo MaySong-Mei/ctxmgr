@@ -385,3 +385,15 @@ def test_manager_has_its_own_output_budget_and_rejections_do_not_end_the_episode
     assert outcome["episode"]["terminated_by"] == "budget_wall"
     edits = [json.loads(line) for line in (out / "edits.jsonl").read_text().splitlines()]
     assert edits and all(e["error"].startswith("server rejected the edit request") for e in edits)
+
+
+def test_v8_bare_edit_object_is_read_as_one_edit_and_marked():
+    # 27B as `self` wrote replies like this in 26 of 31 v7 events ("missing 'edits' list").
+    edits, error = management.parse_edits('{"op": "delete", "ids": [3]}')
+    assert error is None and len(edits) == 1
+    messages = blocks(2)
+    result = management.apply_edits(messages, edits)
+    assert contents(messages) == ["0", "1", "2"]
+    assert result.applied == [{"op": "delete", "ids": [3], "wrapped_bare_edit": True}]
+    # A bare object without an op or inferable fields is still an error.
+    assert management.parse_edits('{"foo": 1}')[1] == "missing 'edits' list"

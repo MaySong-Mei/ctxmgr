@@ -42,8 +42,9 @@ NOTES_HEADER = "[NOTES kept by context management]"
 # v1 = first pilots; v2 = says what to keep; v3 = all-or-nothing replies + notes block;
 # v4 = notes are append-only; v5 = notes block can't be deleted or rewritten, appends are deduplicated;
 # v6 = v5 semantics, instructions say to note needed lines from every block before deleting it;
-# v7 = v6 without "always kept" wording (27B read it as "the notes save needed lines for me").
-EDIT_PROMPT_VERSION = "edit-v7"
+# v7 = v6 without "always kept" wording (27B read it as "the notes save needed lines for me");
+# v8 = v7 + a bare edit object (no {"edits": [...]} wrapper) is read as a one-edit list.
+EDIT_PROMPT_VERSION = "edit-v8"
 
 EDIT_INSTRUCTIONS = """\
 The context is shown as numbered blocks. It is close to its size limit, so free space by editing it.
@@ -108,9 +109,14 @@ def parse_edits(reply: str) -> tuple[list[dict], str | None]:
     if not match:
         return [], "no JSON object in reply"
     try:
-        edits = json.loads(match.group(0)).get("edits")
+        parsed = json.loads(match.group(0))
+        edits = parsed.get("edits")
     except (json.JSONDecodeError, AttributeError) as error:
         return [], f"invalid JSON: {error}"
+    if edits is None and ("op" in parsed or _infer_op(parsed)):
+        # v8: a bare edit object is read as a one-edit list (27B in `self` wrote these in 26 of 31
+        # v7 events; 0 of 104 as `peer_same`). Marked so the format slip stays countable.
+        return [{**parsed, "_wrapped": True}], None
     if not isinstance(edits, list):
         return [], "missing 'edits' list"
     return edits, None
@@ -164,6 +170,8 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
         if inferred:
             op = _infer_op(edit)
         flag = {"inferred_op": True} if inferred else {}
+        if isinstance(edit, dict) and edit.get("_wrapped"):
+            flag["wrapped_bare_edit"] = True
         if op == "delete":
             ids, problem = _delete_ids(edit, len(messages))
             if problem:
