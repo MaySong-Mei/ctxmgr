@@ -467,6 +467,13 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     deletes that drop later needles), as `peer_same` it emits a plan (17 delete+note, 5
     delete+replace, 6 delete-only). So role separation matters for 27B, through how complete each
     management reply is, not through edit validity.
+- Round 12: trigger 27,000 instead of 18,432 (jobs 30125285 4B, 30125287 9B; H200 bf16, edit-v8,
+  seeds 42-45; `none` unaffected). KV R520 lenient (18,432 in brackets): 4B self 0.44 (0.08),
+  peer_same **1.00** (0.27), peer_27b 0.30 (0.27); 9B self 0.28 (0.27), peer_same 0.28 (0.03),
+  peer_27b 0.28 (0.27). Needle K4-C24 peer_27b: 4B 0.73 (0.81), 9B 0.66 (0.75); self/peer_same
+  unchanged. A later trigger removes the KV harm only for 4B same-size management; the 27B manager
+  still deletes value-holding SET batches whenever it runs (~0.28), and Needle gains shrink a little.
+  The trigger matters but does not change the main conclusions; keep 18,432 as the default.
 
 ## Dev
 
