@@ -525,6 +525,15 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   Jobs 30260229/30 failed (submit args shifted); 30260909/10 ran greedy because the sbatch defined
   SAMPLING without passing it (fixed in e9a3b8d). That accidental rerun reproduced the greedy grid
   (4B +0.47, 9B +0.48), so greedy vLLM runs are effectively deterministic.
+- Round 19: full core grid under the same sampling, 4B and 9B, Needle K4-C24 + KV R520 (lenient),
+  seeds 42-49 (jobs 30265858/9, 28 / 37 min). Diff vs none, greedy -> sampled:
+  Needle 4B self 0.00 -> 0.00, peer_same -0.01 -> 0.00, peer_27b +0.46 -> +0.44;
+  Needle 9B self -0.16 -> -0.17 (0/8), peer_same -0.07 -> -0.17 (0/7, p=0.016), peer_27b +0.48 -> +0.33;
+  KV 4B self -0.88 -> -0.89, peer_same -0.72 -> -0.76, peer_27b -0.72 -> -0.74;
+  KV 9B self -0.70 -> -0.70, peer_same -0.95 -> -0.95, peer_27b -0.70 -> -0.79 (all 0/8).
+  Every grid conclusion holds under sampling. Seeded sampling is reproducible: the Needle 4B
+  none / peer_27b cells repeat round 18 exactly.
+- Round 20 (submitted): same sampled grid for 0.8B and 2B (jobs 30271270/1).
 
 ## Dev
 
