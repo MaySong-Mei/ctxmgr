@@ -1,37 +1,28 @@
 # ctxmgr
 
-Who should manage an LLM agent's context? We compare **no management**, **CLM self-management**,
-a **same-size peer manager**, and a **fixed 27B peer manager** across Qwen3.5 actor sizes
-(0.8B, 2B, 4B, 9B, 27B) on the official [ContextBench](https://github.com/RulinShao/ContextBench)
-KV Store and Needle Retention tasks (pinned revision; Track 1 adapter in `src/ctxmgr/tasks/`).
+Who should manage an LLM agent's context? We compare **no management**, **self-management**, a
+**same-size peer manager** and a **fixed 27B peer manager** for Qwen3.5 actors (0.8B–27B) on the
+official [ContextBench](https://github.com/RulinShao/ContextBench) KV Store and Needle Retention
+tasks (32,768-token o200k budget).
 
-## Layout
+## Current implementation
 
-| Path | Track | Contents |
-|---|---|---|
-| `src/ctxmgr/tasks/` | 1 — Tasks & eval | Seeded instance generators, o200k token counts, pressure levels, scoring |
-| `src/ctxmgr/harness/` | 2 — Harness & managers | Agent loop on vLLM, CLM edit tools/prompts, manager hook, per-step logs |
-| `src/ctxmgr/serving/` | 3 — Infra | vLLM launch helpers, model registry |
-| `src/ctxmgr/accounting/` | 3 — Infra | Compute accounting incl. manager calls (adapted from CLM `flops_metrics/`) |
-| `src/ctxmgr/analysis/` | 3 — Analysis | Grid aggregation, plots, failure taxonomy |
-| `configs/` | all | Experiment grid / model configs (YAML) |
-| `slurm/` | 3 | Batch scripts for the Bouchet `education_gpu` partition |
-| `scripts/` | all | Entry-point scripts |
-| `report/` | all | 4-page NeurIPS write-up, reproducibility checklist |
-| `docs/` | all | Interface specs (task format in → context/answers out), notes |
+| Path | Contents |
+|---|---|
+| `slurm/` | vLLM 0.30 environment setup and serving jobs for Yale Bouchet (A40 / H200 GPUs) |
+| `scripts/smoke_test.py` | Server check: short chat, long-context recall, throughput |
+| `scripts/*.py` (other) | Analysis: lenient KV score, paired comparisons vs no management, figures |
+| `docs/tables/`, `docs/figures/` | Results so far: 967 episodes (H200, bf16), pooled table, figures |
+| `docs/` | Cluster setup, log schema, manager literature notes |
 
-## Setup
+The task adapter (Track 1) and the agent harness with the four management conditions (Track 2)
+are on the `ruthvik/track1-tasks` and `may/track2-baseline` branches and will be merged after review.
+
+## Usage
 
 ```bash
-uv sync                 # local dev (no GPU)
-uv run pytest
+uv sync --locked
+uv run python scripts/pooled_grid.py   # needs run directories under runs/
 ```
 
-On the cluster GPU nodes, vLLM is installed separately (Linux + CUDA only); see `slurm/`.
-
-## Compute notes (Yale Bouchet, `education_gpu`)
-
-- Limit: **1 GPU per user, 1 job at a time, 24 h wall time**. GPUs: A5000 (24 GB), RTX 5000 Ada (32 GB), A40 (48 GB, only 4).
-- Run all computation through Slurm, never on login nodes.
-- Store model weights and results in the course **project** directory (backed up). Scratch is purged after 30 days.
-- Qwen3.5-27B (bf16, ~56 GB) fits on no single GPU → use the official `Qwen3.5-27B-FP8` (~31 GB) on an A40.
+On the cluster: `sbatch slurm/setup_env.sbatch`, then `sbatch slurm/serve_smoke.sbatch`.
