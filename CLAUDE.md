@@ -533,7 +533,15 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   KV 9B self -0.70 -> -0.70, peer_same -0.95 -> -0.95, peer_27b -0.70 -> -0.79 (all 0/8).
   Every grid conclusion holds under sampling. Seeded sampling is reproducible: the Needle 4B
   none / peer_27b cells repeat round 18 exactly.
-- Round 20 (submitted): same sampled grid for 0.8B and 2B (jobs 30271270/1).
+- Round 20: same sampled grid for 0.8B and 2B (jobs 30271270/1, 40 min). Diff vs none, greedy -> sampled:
+  Needle 2B self 0.00 -> +0.01, peer_same +0.03 -> +0.01, peer_27b +0.67 -> +0.43 (8/8);
+  Needle 0.8B self / peer_same 0.00 -> 0.00, peer_27b +0.64 -> +0.23 [+0.05, +0.42] (5/1, p=0.22);
+  KV 2B self -0.01 -> -0.12, peer_same -0.06 -> -0.12, peer_27b -0.33 -> -0.42 (none 0.46 -> 0.49,
+  bimodal per seed); KV 0.8B none 0.00 -> 0.08 (one seed 0.62), all managed 0.00-0.08.
+  0.8B degenerates under sampling: 130 of 600 sampled actor calls on Needle hit max_tokens
+  (finish_reason length), 0 under greedy; 2B/4B/9B have 0 in both. Needle 0.8B `none` falls to 0.04 on
+  3/8 seeds, and peer_27b episodes run into max_steps. With sampling the peer_27b gain stays
+  significant for 2B/4B/9B (+0.43 / +0.44 / +0.33) but not for 0.8B.
 
 ## Dev
 
