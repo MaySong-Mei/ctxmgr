@@ -27,6 +27,9 @@ SEEDS="${SEEDS:-${SEED:-42}}"
 # Conditions served by one model: none, self, peer_same (peer_27b needs a second server).
 CONDITIONS="${CONDITIONS:-none}"
 TRIGGER="${TRIGGER:-18432}"
+# Extra harness sampling flags, e.g. "--temperature 0.7 --top-p 0.8 --top-k 20" (default: greedy).
+# With SAMPLING set, each request also gets --sampling-seed <instance seed>.
+SAMPLING="${SAMPLING:-}"
 # The benchmark budget is 32,768 o200k tokens; Qwen's tokenizer can need more for the same text, so
 # serve with headroom and let ContextBench's o200k wall decide when an episode ends.
 MAX_LEN="${MAX_LEN:-40960}"
@@ -38,6 +41,7 @@ RUNS="${PROJECT_DIR}/runs/baseline-${J}"
 
 echo "host=$(hostname) job=${J} models=${MODELS} conditions=${CONDITIONS} trigger=${TRIGGER} max_len=${MAX_LEN} levels=${LEVELS} seeds=${SEEDS}"
 echo "commit=$(git rev-parse --short HEAD) runs=${RUNS}"
+echo "sampling=${SAMPLING:-greedy}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
 uv sync --locked --group serve --quiet || exit 1
@@ -73,11 +77,16 @@ for MODEL in ${MODELS}; do
             # peer_same reuses this server as a separate manager session (no second weight copy).
             for cond in ${CONDITIONS}; do
                 echo "===== ${TAG} ${cond} ${name} ====="
+                extra=()
+                if [[ -n "${SAMPLING}" ]]; then
+                    read -r -a sampling_args <<< "${SAMPLING}"
+                    extra=("${sampling_args[@]}" --sampling-seed "${SEED}")
+                fi
                 if ! uv run python -m ctxmgr.harness run "${instance}" \
                     --out "${RUNS}/${TAG}/${cond}/${name}" --condition "${cond}" \
                     --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}" \
                     --served-max-len "${MAX_LEN}" --precision "${PRECISION:-bf16}" \
-                    --trigger "${TRIGGER}"; then
+                    --trigger "${TRIGGER}" "${extra[@]}"; then
                     failed+=("${TAG}/${cond}/${name}:run")
                 fi
             done
