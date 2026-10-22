@@ -30,6 +30,11 @@ def main():
     cmd.add_argument("--precision")
     cmd.add_argument("--max-tokens", type=int, default=Sampling.max_tokens)
     cmd.add_argument("--thinking", action="store_true", help="enable Qwen3.5 thinking")
+    cmd.add_argument("--temperature", type=float, default=Sampling.temperature)
+    cmd.add_argument("--top-p", type=float, default=Sampling.top_p)
+    cmd.add_argument("--top-k", type=int, help="vLLM top_k (default: not sent)")
+    cmd.add_argument("--presence-penalty", type=float, help="default: not sent")
+    cmd.add_argument("--sampling-seed", type=int, help="per-request seed (default: not sent)")
     cmd.add_argument("--timeout", type=float, default=600.0, help="seconds per request")
     cmd.add_argument("--trigger", type=int, default=ManagedAgent.trigger, help="o200k tokens")
     cmd.add_argument(
@@ -58,7 +63,15 @@ def main():
     agent = CONDITIONS[args.condition](
         client=client,
         model=args.model,
-        sampling=Sampling(max_tokens=args.max_tokens, thinking=args.thinking),
+        sampling=Sampling(
+            temperature=args.temperature,
+            top_p=args.top_p,
+            max_tokens=args.max_tokens,
+            thinking=args.thinking,
+            top_k=args.top_k,
+            presence_penalty=args.presence_penalty,
+            seed=args.sampling_seed,
+        ),
         **kwargs,
     )
     outcome = run_episode(

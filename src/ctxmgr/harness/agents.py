@@ -25,14 +25,26 @@ class Sampling:
     top_p: float = 1.0
     max_tokens: int = 2048  # matches the benchmark's 2,048-token reserve
     thinking: bool = False  # Qwen3.5 thinks by default; off keeps reasoning text out of the context
+    # Unset by default (not sent): greedy decoding, as in all runs before the sampling ablation.
+    top_k: int | None = None
+    presence_penalty: float | None = None
+    seed: int | None = None
 
     def request_kwargs(self, max_tokens: int | None = None) -> dict:
-        return {
+        extra = {"chat_template_kwargs": {"enable_thinking": self.thinking}}
+        if self.top_k is not None:
+            extra["top_k"] = self.top_k
+        kwargs = {
             "temperature": self.temperature,
             "top_p": self.top_p,
             "max_tokens": max_tokens or self.max_tokens,
-            "extra_body": {"chat_template_kwargs": {"enable_thinking": self.thinking}},
+            "extra_body": extra,
         }
+        if self.presence_penalty is not None:
+            kwargs["presence_penalty"] = self.presence_penalty
+        if self.seed is not None:
+            kwargs["seed"] = self.seed
+        return kwargs
 
 
 @dataclass

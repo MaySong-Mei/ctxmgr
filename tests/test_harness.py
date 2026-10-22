@@ -128,3 +128,16 @@ def test_actor_that_never_advances_stops_at_max_turns(tmp_path):
     n_ops = json.loads((instance / "manifest.json").read_text())["n_ops"]
     assert episode["max_turns"] == 2 * n_ops + 10
     assert len(list((out / "context_snapshots").glob("turn-*.json"))) == episode["max_turns"]
+
+
+def test_sampling_defaults_unchanged_and_ablation_flags_sent():
+    from ctxmgr.harness.agents import Sampling
+
+    greedy = Sampling().request_kwargs()
+    assert greedy["temperature"] == 0.0 and greedy["top_p"] == 1.0
+    assert "presence_penalty" not in greedy and "seed" not in greedy
+    assert "top_k" not in greedy["extra_body"]
+    sampled = Sampling(temperature=0.7, top_p=0.8, top_k=20, presence_penalty=1.5, seed=42)
+    kwargs = sampled.request_kwargs(max_tokens=4096)
+    assert kwargs["extra_body"]["top_k"] == 20 and kwargs["presence_penalty"] == 1.5
+    assert kwargs["seed"] == 42 and kwargs["max_tokens"] == 4096

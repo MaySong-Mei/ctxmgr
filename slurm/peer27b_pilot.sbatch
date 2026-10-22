@@ -25,6 +25,9 @@ CONDITIONS="${CONDITIONS:-none self peer_same peer_27b}"
 # Space-separated; each (level, seed) instance is generated once and shared by all conditions.
 SEEDS="${SEEDS:-${SEED:-42}}"
 TRIGGER="${TRIGGER:-18432}"
+# Extra harness sampling flags, e.g. "--temperature 0.7 --top-p 0.8 --top-k 20" (default: greedy).
+# With SAMPLING set, each request also gets --sampling-seed <instance seed>.
+SAMPLING="${SAMPLING:-}"
 # Manager context is bounded by its KV share (27B at 0.79 holds one ~49K request). The actor gets
 # more: on Needle the Qwen/o200k ratio reaches ~1.78, so 49,152 rejected a `none` episode before
 # the o200k wall (job 30046489, s49).
