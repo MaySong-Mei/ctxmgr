@@ -44,6 +44,7 @@ RUNS="${PROJECT_DIR}/runs/peer27b-${J}"
 
 echo "host=$(hostname) job=${J} actor=${ACTOR} manager=${MANAGER} conditions=${CONDITIONS}"
 echo "levels=${LEVELS} seeds=${SEEDS} trigger=${TRIGGER} max_len=${MAX_LEN} actor_max_len=${ACTOR_MAX_LEN} commit=$(git rev-parse --short HEAD)"
+echo "sampling=${SAMPLING:-greedy}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
 uv sync --locked --group serve --quiet || exit 1
@@ -95,6 +96,10 @@ for SEED in ${SEEDS}; do
             extra=()
             [[ "${cond}" == "peer_27b" ]] && extra=(--manager-base-url "http://127.0.0.1:${P1}/v1" \
                 --manager-model "${MANAGER}")
+            if [[ -n "${SAMPLING}" ]]; then
+                read -r -a sampling_args <<< "${SAMPLING}"
+                extra+=("${sampling_args[@]}" --sampling-seed "${SEED}")
+            fi
             if ! uv run python -m ctxmgr.harness run "${instance}" \
                 --out "${RUNS}/${TAG}/${cond}/${name}" --condition "${cond}" \
                 --base-url "http://127.0.0.1:${P2}/v1" --model "${ACTOR}" \
