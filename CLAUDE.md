@@ -516,9 +516,15 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   (4/4). `none` hits the budget wall at the same point on every seed (identical scores). Managed
   episodes often end at max_steps (K4-C96: self 1/4, peer_same 2/4; K8-C60: 1/4 each), so their
   scores are a lower bound. The role-separation gain seen at K4-C24 / K8-C48 holds at higher pressure.
-- Round 18 (submitted): decoding ablation, Qwen3.5 recommended non-thinking sampling (temperature 0.7,
-  top_p 0.8, top_k 20, presence_penalty 1.5, request seed = instance seed) instead of greedy.
-  4B and 9B, Needle K4-C24, none vs peer_27b, seeds 42-49 (jobs 30260229/30).
+- Round 18: decoding ablation, Qwen3.5 recommended non-thinking sampling (temperature 0.7, top_p 0.8,
+  top_k 20, presence_penalty 1.5, request seed = instance seed) instead of greedy, for actor and
+  manager. 4B and 9B, Needle K4-C24, none vs peer_27b, seeds 42-49 (jobs 30263988/9, ~15 min each).
+  peer_27b - none: 4B greedy +0.46 -> sampled +0.44 [+0.35, +0.52]; 9B +0.48 -> +0.33 [+0.23, +0.43];
+  8/8 seeds positive in both (p=0.008). `none` unchanged (0.33, budget wall); peer_27b means
+  4B 0.80 -> 0.77, 9B 0.80 -> 0.67 (paired sampled - greedy n.s.). The effect does not depend on greedy.
+  Jobs 30260229/30 failed (submit args shifted); 30260909/10 ran greedy because the sbatch defined
+  SAMPLING without passing it (fixed in e9a3b8d). That accidental rerun reproduced the greedy grid
+  (4B +0.47, 9B +0.48), so greedy vLLM runs are effectively deterministic.
 
 ## Dev
 
