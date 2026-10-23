@@ -549,8 +549,8 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   peer_same - self: greedy +0.48 [+0.41, +0.55] (8/0) -> sampled +0.06 [-0.13, +0.26] (4/4, p=1.0).
   self - none: +0.08 (5/1) -> +0.31 (7/0, p=0.016); peer_same - none: +0.56 -> +0.37 (8/0 both).
   Paired sampled - greedy: self +0.23 (6/2), peer_same -0.19 (1/6). Self edit events applied:
-  greedy v8 75% (8/32 failed, mostly "missing 'edits' list": duplicate keys in one JSON object),
-  sampled 95% (54/57). The 27B role-separation gain at K4-C24 does not hold under recommended
+  greedy v8 49/49 (runs 30118842 + 30136264), sampled 54/57, so the self gain is not fewer failed
+  edits. The 27B role-separation gain at K4-C24 does not hold under recommended
   sampling; under sampling both managed conditions beat none.
 
 ## Dev
