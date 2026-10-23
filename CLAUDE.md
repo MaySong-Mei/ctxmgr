@@ -542,6 +542,16 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   (finish_reason length), 0 under greedy; 2B/4B/9B have 0 in both. Needle 0.8B `none` falls to 0.04 on
   3/8 seeds, and peer_27b episodes run into max_steps. With sampling the peer_27b gain stays
   significant for 2B/4B/9B (+0.43 / +0.44 / +0.33) but not for 0.8B.
+- Round 21: 27B actor under the same sampling, Needle K4-C24, none / self / peer_same, seeds 42-49
+  (job 30335778, 4.6 h, edit-v8; baseline_smoke.sbatch takes SAMPLING since 62e0b38). Greedy reference =
+  pooled runs 30088184 / 30118842 / 30136264 (self all v8; peer_same s42-45 v7, s46-49 v8).
+  Means greedy -> sampled: none 0.29 -> 0.29, self 0.38 -> 0.60, peer_same 0.85 -> 0.67.
+  peer_same - self: greedy +0.48 [+0.41, +0.55] (8/0) -> sampled +0.06 [-0.13, +0.26] (4/4, p=1.0).
+  self - none: +0.08 (5/1) -> +0.31 (7/0, p=0.016); peer_same - none: +0.56 -> +0.37 (8/0 both).
+  Paired sampled - greedy: self +0.23 (6/2), peer_same -0.19 (1/6). Self edit events applied:
+  greedy v8 75% (8/32 failed, mostly "missing 'edits' list": duplicate keys in one JSON object),
+  sampled 95% (54/57). The 27B role-separation gain at K4-C24 does not hold under recommended
+  sampling; under sampling both managed conditions beat none.
 
 ## Dev
 
