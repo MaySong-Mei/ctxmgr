@@ -552,6 +552,13 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   greedy v8 49/49 (runs 30118842 + 30136264), sampled 54/57, so the self gain is not fewer failed
   edits. The 27B role-separation gain at K4-C24 does not hold under recommended
   sampling; under sampling both managed conditions beat none.
+- Round 22: same as round 21 at Needle K8-C48 (job 30691916, edit-v8, seeds 42-49). Means greedy ->
+  sampled: none 0.15 -> 0.15, self 0.14 -> 0.18, peer_same 0.34 -> 0.30.
+  peer_same - self: greedy +0.20 [+0.15, +0.23] (8/0) -> sampled +0.12 [+0.02, +0.21] (6/1, p=0.125).
+  peer_same - none: +0.19 (8/0) -> +0.15 [+0.07, +0.24] (6/0, p=0.031); self - none: 0.00 -> +0.03 (5/2).
+  Sampled self ends at max_steps on 8/8 seeds and peer_same on 7/8 (scores are lower bounds).
+  At K8-C48 the role-separation gain shrinks under sampling but keeps its sign (CI above 0);
+  at K4-C24 (round 21) it vanished.
 
 ## Dev
 
