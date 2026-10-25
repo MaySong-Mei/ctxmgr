@@ -141,3 +141,13 @@ def test_sampling_defaults_unchanged_and_ablation_flags_sent():
     kwargs = sampled.request_kwargs(max_tokens=4096)
     assert kwargs["extra_body"]["top_k"] == 20 and kwargs["presence_penalty"] == 1.5
     assert kwargs["seed"] == 42 and kwargs["max_tokens"] == 4096
+
+
+def test_max_turns_per_op_raises_the_turn_cap(tmp_path):
+    instance, _ = kv_instance(tmp_path)
+    out = tmp_path / "run"
+    outcome = run_episode(
+        fake_agent(NeverReady()), instance, out, condition="none", max_turns_per_op=3
+    )
+    n_ops = json.loads((instance / "manifest.json").read_text())["n_ops"]
+    assert outcome["episode"]["max_turns"] == 3 * n_ops + 10

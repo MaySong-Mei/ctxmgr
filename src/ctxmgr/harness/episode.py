@@ -45,6 +45,7 @@ def run_episode(
     served_max_len: int | None = None,
     precision: str | None = None,
     prompt_version: str = "contextbench-default",
+    max_turns_per_op: int = MAX_TURNS_PER_OP,
 ) -> dict:
     """Run, log and score one episode. A server rejection is recorded, not raised."""
     instance_dir, out = Path(instance_dir), Path(out_dir)
@@ -55,7 +56,7 @@ def run_episode(
     # Safety stop. Without management the budget wall ends an actor that never writes the READY
     # marker; with management the context stays small, so such an actor loops forever (2B on KV R1000
     # under peer_27b ran 53,920 turns in job 30069167). Ends as `max_steps`, which is recorded.
-    max_turns = MAX_TURNS_PER_OP * manifest["n_ops"] + MAX_TURNS_SLACK
+    max_turns = max_turns_per_op * manifest["n_ops"] + MAX_TURNS_SLACK
     terminated_by, error = None, None
     try:
         result = run(

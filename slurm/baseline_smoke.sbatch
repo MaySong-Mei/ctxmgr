@@ -30,6 +30,8 @@ TRIGGER="${TRIGGER:-18432}"
 # Extra harness sampling flags, e.g. "--temperature 0.7 --top-p 0.8 --top-k 20" (default: greedy).
 # With SAMPLING set, each request also gets --sampling-seed <instance seed>.
 SAMPLING="${SAMPLING:-}"
+# Turn cap per operation (harness default 2); max_turns = this x n_ops + 10.
+MAX_TURNS_PER_OP="${MAX_TURNS_PER_OP:-2}"
 # The benchmark budget is 32,768 o200k tokens; Qwen's tokenizer can need more for the same text, so
 # serve with headroom and let ContextBench's o200k wall decide when an episode ends.
 MAX_LEN="${MAX_LEN:-40960}"
@@ -41,7 +43,7 @@ RUNS="${PROJECT_DIR}/runs/baseline-${J}"
 
 echo "host=$(hostname) job=${J} models=${MODELS} conditions=${CONDITIONS} trigger=${TRIGGER} max_len=${MAX_LEN} levels=${LEVELS} seeds=${SEEDS}"
 echo "commit=$(git rev-parse --short HEAD) runs=${RUNS}"
-echo "sampling=${SAMPLING:-greedy}"
+echo "sampling=${SAMPLING:-greedy} max_turns_per_op=${MAX_TURNS_PER_OP}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
 uv sync --locked --group serve --quiet || exit 1
@@ -86,7 +88,7 @@ for MODEL in ${MODELS}; do
                     --out "${RUNS}/${TAG}/${cond}/${name}" --condition "${cond}" \
                     --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}" \
                     --served-max-len "${MAX_LEN}" --precision "${PRECISION:-bf16}" \
-                    --trigger "${TRIGGER}" "${extra[@]}"; then
+                    --trigger "${TRIGGER}" --max-turns-per-op "${MAX_TURNS_PER_OP}" "${extra[@]}"; then
                     failed+=("${TAG}/${cond}/${name}:run")
                 fi
             done

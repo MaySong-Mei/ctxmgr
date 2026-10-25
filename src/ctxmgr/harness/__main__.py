@@ -7,7 +7,7 @@ from pathlib import Path
 import openai
 
 from .agents import ManagedAgent, NoManagementAgent, PeerManagedAgent, Sampling, SelfManagedAgent
-from .episode import run_episode
+from .episode import MAX_TURNS_PER_OP, run_episode
 
 CONDITIONS = {
     "none": NoManagementAgent,
@@ -42,6 +42,12 @@ def main():
         type=int,
         default=ManagedAgent.manager_max_tokens,
         help="output budget of edit requests (self and peer)",
+    )
+    cmd.add_argument(
+        "--max-turns-per-op",
+        type=int,
+        default=MAX_TURNS_PER_OP,
+        help="safety stop: max_turns = this x n_ops + slack",
     )
     cmd.add_argument("--manager-base-url", help="peer manager server (default: --base-url)")
     cmd.add_argument("--manager-model", help="peer manager model (peer_same: same as --model)")
@@ -82,6 +88,7 @@ def main():
         manager_model=kwargs.get("manager_model"),
         served_max_len=args.served_max_len,
         precision=args.precision,
+        max_turns_per_op=args.max_turns_per_op,
     )
     score = outcome["score"]
     print(
