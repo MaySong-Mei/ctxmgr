@@ -559,6 +559,11 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   Sampled self ends at max_steps on 8/8 seeds and peer_same on 7/8 (scores are lower bounds).
   At K8-C48 the role-separation gain shrinks under sampling but keeps its sign (CI above 0);
   at K4-C24 (round 21) it vanished.
+- Round 23: round 22's self / peer_same rerun with max_turns_per_op 4 (cap 202 instead of 106; job
+  30791880, 1bffcd8, ~17 h). Means self 0.18 -> 0.20, peer_same 0.30 -> 0.31 (paired +0.02 each,
+  n.s.). Still at the cap: self 3/8, peer_same 4/8. peer_same - self +0.11 [-0.00, +0.23] (5/2),
+  peer_same - none +0.17 (6/0, p=0.031), self - none +0.05 (6/1). The 106-turn cap did not
+  materially lower round 22's scores; seeded sampling reproduced peer_same s44-49 exactly.
 
 ## Dev
 

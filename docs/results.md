@@ -7,7 +7,7 @@ Needle Retention and KV Store under a 32,768-token o200k budget. Managers edit n
 and `peer_27b` (a fixed Qwen3.5-27B manager). Managers are untrained (zero-shot). Each cell has 8 seeds
 (42–49) unless noted; differences are paired on the same instance.
 
-Sources: `docs/tables/episodes_vllm.csv` (1,359 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (1,375 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. Run log: `CLAUDE.md`.
 
 ## Findings
@@ -45,8 +45,9 @@ grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. 
 
 ## Caveats
 
-- Under sampling, most managed 27B episodes at K8-C48 end at the turn cap (`max_steps`), so those
-  scores are lower bounds. A rerun with a doubled cap (job 30791880) is in progress.
+- Under sampling, most managed 27B episodes at K8-C48 end at the turn cap (`max_steps`). Doubling the
+  cap (job 30791880) changed means by +0.02 (`self` 0.18 → 0.20, `peer_same` 0.30 → 0.31) and
+  `peer_same` - `self` from +0.12 to +0.11 (5/2), so the cap is not driving these results.
 - Two synthetic tasks, one model family, untrained managers. KV uses a lenient score that ignores
   the `#hash` suffix and punctuation (`scripts/lenient_kv.py`); official KV scores are in the CSV.
 - The 27B manager may help partly by absorbing protocol/format work for small actors; no

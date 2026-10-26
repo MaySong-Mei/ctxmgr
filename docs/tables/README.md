@@ -10,9 +10,10 @@ live in the course project directory, not in git.
   harness (`EDIT_PROMPT_VERSION`). Empty for `none`.
 - `temperature` / `top_p` / `top_k` / `presence_penalty`: decoding of actor and manager. Sampled
   (0.7 / 0.8 / 20 / 1.5, request seed = instance seed): jobs 30263988/9, 30265858/9, 30271270/1,
-  30335778, 30691916. All other jobs are greedy (temperature 0). Jobs 30260909/10 were meant as the
+  30335778, 30691916, 30791880. All other jobs are greedy (temperature 0). Jobs 30260909/10 were meant as the
   ablation but ran greedy (sbatch bug) and are kept as a greedy replicate.
-- `max_turns`: safety cap, 2 x n_ops + 10 where logged (empty for jobs before the cap existed).
+- `max_turns`: safety cap, 2 x n_ops + 10 where logged (empty for jobs before the cap existed);
+  job 30791880 uses 4 x n_ops + 10.
 - `official_reward`: ContextBench official score. `required_info_loss` (Needle) and
   `strict_exact_accuracy` (KV) are Track 1 diagnostics.
 - `mgmt_events` / `events_applied` / `manager_capped`: management calls, calls with at least one
