@@ -12,6 +12,7 @@ tasks (32,768-token o200k budget).
 | `slurm/` | vLLM 0.30 environment setup and serving jobs for Yale Bouchet (A40 / H200 GPUs) |
 | `scripts/smoke_test.py` | Server check: short chat, long-context recall, throughput |
 | `scripts/*.py` (other) | Analysis: lenient KV score, paired comparisons vs no management, figures |
+| `scripts/clm_automation.sh`, `tools/clm_automation/` | Resume an existing native CLM recovery; validate, summarize and optionally publish to GitHub Discussions |
 | `docs/results.md`, `docs/tables/`, `docs/figures/` | Results so far: summary, 1,375 episodes (vLLM, bf16), pooled and decoding-ablation tables, figures |
 | `docs/` | Cluster setup, log schema, manager literature notes |
 
@@ -26,3 +27,8 @@ uv run python scripts/pooled_grid.py   # needs run directories under runs/
 ```
 
 On the cluster: `sbatch slurm/setup_env.sbatch`, then `sbatch slurm/serve_smoke.sbatch`.
+
+For an existing native CLM Q8_0 recovery, follow the separate
+[automation guide](docs/clm-automation.md). This adapter preserves the frozen
+experiment and does not replace the vLLM harness or mix its results with the
+native `clm_self` comparison.
