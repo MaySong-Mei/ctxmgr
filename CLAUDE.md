@@ -510,6 +510,55 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   6 min each). Pressure 0.24 / 0.44: the trigger is never reached (0 events), so peer_27b = none
   (lenient 4B 1.00 / 1.00, 9B 1.00 / 0.99). KV curve: management changes nothing until it fires,
   and as soon as it fires (R520, R1000) lenient recall drops to ~0.25-0.28 for every manager.
+- Round 17: 27B actor at higher Needle pressure, none / self / peer_same (job 30180821, H200 bf16,
+  edit-v8, seeds 42-45, 13.5 h). K8-C60: 0.12 / 0.10 / 0.28; K4-C96: 0.07 / 0.13 / 0.30.
+  peer_same - self +0.13..+0.23 and +0.15..+0.18 (4/4 seeds each); peer_same - none +0.12..+0.24
+  (4/4). `none` hits the budget wall at the same point on every seed (identical scores). Managed
+  episodes often end at max_steps (K4-C96: self 1/4, peer_same 2/4; K8-C60: 1/4 each), so their
+  scores are a lower bound. The role-separation gain seen at K4-C24 / K8-C48 holds at higher pressure.
+- Round 18: decoding ablation, Qwen3.5 recommended non-thinking sampling (temperature 0.7, top_p 0.8,
+  top_k 20, presence_penalty 1.5, request seed = instance seed) instead of greedy, for actor and
+  manager. 4B and 9B, Needle K4-C24, none vs peer_27b, seeds 42-49 (jobs 30263988/9, ~15 min each).
+  peer_27b - none: 4B greedy +0.46 -> sampled +0.44 [+0.35, +0.52]; 9B +0.48 -> +0.33 [+0.23, +0.43];
+  8/8 seeds positive in both (p=0.008). `none` unchanged (0.33, budget wall); peer_27b means
+  4B 0.80 -> 0.77, 9B 0.80 -> 0.67 (paired sampled - greedy n.s.). The effect does not depend on greedy.
+  Jobs 30260229/30 failed (submit args shifted); 30260909/10 ran greedy because the sbatch defined
+  SAMPLING without passing it (fixed in e9a3b8d). That accidental rerun reproduced the greedy grid
+  (4B +0.47, 9B +0.48), so greedy vLLM runs are effectively deterministic.
+- Round 19: full core grid under the same sampling, 4B and 9B, Needle K4-C24 + KV R520 (lenient),
+  seeds 42-49 (jobs 30265858/9, 28 / 37 min). Diff vs none, greedy -> sampled:
+  Needle 4B self 0.00 -> 0.00, peer_same -0.01 -> 0.00, peer_27b +0.46 -> +0.44;
+  Needle 9B self -0.16 -> -0.17 (0/8), peer_same -0.07 -> -0.17 (0/7, p=0.016), peer_27b +0.48 -> +0.33;
+  KV 4B self -0.88 -> -0.89, peer_same -0.72 -> -0.76, peer_27b -0.72 -> -0.74;
+  KV 9B self -0.70 -> -0.70, peer_same -0.95 -> -0.95, peer_27b -0.70 -> -0.79 (all 0/8).
+  Every grid conclusion holds under sampling. Seeded sampling is reproducible: the Needle 4B
+  none / peer_27b cells repeat round 18 exactly.
+- Round 20: same sampled grid for 0.8B and 2B (jobs 30271270/1, 40 min). Diff vs none, greedy -> sampled:
+  Needle 2B self 0.00 -> +0.01, peer_same +0.03 -> +0.01, peer_27b +0.67 -> +0.43 (8/8);
+  Needle 0.8B self / peer_same 0.00 -> 0.00, peer_27b +0.64 -> +0.23 [+0.05, +0.42] (5/1, p=0.22);
+  KV 2B self -0.01 -> -0.12, peer_same -0.06 -> -0.12, peer_27b -0.33 -> -0.42 (none 0.46 -> 0.49,
+  bimodal per seed); KV 0.8B none 0.00 -> 0.08 (one seed 0.62), all managed 0.00-0.08.
+  0.8B degenerates under sampling: 130 of 600 sampled actor calls on Needle hit max_tokens
+  (finish_reason length), 0 under greedy; 2B/4B/9B have 0 in both. Needle 0.8B `none` falls to 0.04 on
+  3/8 seeds, and peer_27b episodes run into max_steps. With sampling the peer_27b gain stays
+  significant for 2B/4B/9B (+0.43 / +0.44 / +0.33) but not for 0.8B.
+- Round 21: 27B actor under the same sampling, Needle K4-C24, none / self / peer_same, seeds 42-49
+  (job 30335778, 4.6 h, edit-v8; baseline_smoke.sbatch takes SAMPLING since 62e0b38). Greedy reference =
+  pooled runs 30088184 / 30118842 / 30136264 (self all v8; peer_same s42-45 v7, s46-49 v8).
+  Means greedy -> sampled: none 0.29 -> 0.29, self 0.38 -> 0.60, peer_same 0.85 -> 0.67.
+  peer_same - self: greedy +0.48 [+0.41, +0.55] (8/0) -> sampled +0.06 [-0.13, +0.26] (4/4, p=1.0).
+  self - none: +0.08 (5/1) -> +0.31 (7/0, p=0.016); peer_same - none: +0.56 -> +0.37 (8/0 both).
+  Paired sampled - greedy: self +0.23 (6/2), peer_same -0.19 (1/6). Self edit events applied:
+  greedy v8 49/49 (runs 30118842 + 30136264), sampled 54/57, so the self gain is not fewer failed
+  edits. The 27B role-separation gain at K4-C24 does not hold under recommended
+  sampling; under sampling both managed conditions beat none.
+- Round 22: same as round 21 at Needle K8-C48 (job 30691916, edit-v8, seeds 42-49). Means greedy ->
+  sampled: none 0.15 -> 0.15, self 0.14 -> 0.18, peer_same 0.34 -> 0.30.
+  peer_same - self: greedy +0.20 [+0.15, +0.23] (8/0) -> sampled +0.12 [+0.02, +0.21] (6/1, p=0.125).
+  peer_same - none: +0.19 (8/0) -> +0.15 [+0.07, +0.24] (6/0, p=0.031); self - none: 0.00 -> +0.03 (5/2).
+  Sampled self ends at max_steps on 8/8 seeds and peer_same on 7/8 (scores are lower bounds).
+  At K8-C48 the role-separation gain shrinks under sampling but keeps its sign (CI above 0);
+  at K4-C24 (round 21) it vanished.
 
 ## Dev
 
