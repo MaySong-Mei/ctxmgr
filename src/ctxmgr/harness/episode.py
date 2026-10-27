@@ -16,7 +16,7 @@ from ctxmgr.tasks import score_run, validate_instance
 from ctxmgr.tasks.core import BUDGET, RESERVE, UPSTREAM_COMMIT
 
 from .agents import ChatAgent, ServerRejected
-from .management import EDIT_PROMPT_VERSION
+from .management import ARCHIVE_PROMPT_VERSION, EDIT_PROMPT_VERSION
 
 MAX_TURNS_PER_OP = 2
 MAX_TURNS_SLACK = 10
@@ -29,6 +29,14 @@ def _repo_commit() -> str | None:
         ).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return None
+
+
+def _edit_version(agent: ChatAgent) -> str | None:
+    if not hasattr(agent, "edits"):
+        return None  # none / none_r
+    if getattr(agent, "editor", None) == "rule":
+        return "rule-mask-v1"
+    return ARCHIVE_PROMPT_VERSION if agent.use_archive else EDIT_PROMPT_VERSION
 
 
 def _write_json(path: Path, data: dict) -> None:
@@ -83,7 +91,9 @@ def run_episode(
         "max_turns": max_turns,
         "served_max_len": served_max_len,
         "prompt_version": prompt_version,
-        "edit_prompt_version": EDIT_PROMPT_VERSION if condition != "none" else None,
+        "edit_prompt_version": _edit_version(agent),
+        "archive": getattr(agent, "use_archive", False),
+        "archived_blocks": len(getattr(agent, "archive", [])),
         "sampling": agent.sampling.__dict__,
         "terminated_by": terminated_by,
         "error": error,
@@ -99,6 +109,10 @@ def run_episode(
     with (out / "edits.jsonl").open("w", encoding="utf-8") as handle:
         for edit in getattr(agent, "edits", []):
             handle.write(json.dumps(edit) + "\n")
+    if getattr(agent, "use_archive", False):
+        with (out / "recalls.jsonl").open("w", encoding="utf-8") as handle:
+            for recall in agent.recalls:
+                handle.write(json.dumps(recall) + "\n")
 
     score = None
     if any((out / "context_snapshots").glob("turn-*.json")):

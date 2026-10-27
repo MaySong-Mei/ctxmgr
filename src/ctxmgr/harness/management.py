@@ -45,8 +45,11 @@ NOTES_HEADER = "[NOTES kept by context management]"
 # v7 = v6 without "always kept" wording (27B read it as "the notes save needed lines for me");
 # v8 = v7 + a bare edit object (no {"edits": [...]} wrapper) is read as a one-edit list.
 EDIT_PROMPT_VERSION = "edit-v8"
+# Archive conditions (`*_arc`): v8 semantics, but deleted and replaced blocks move to an archive the
+# actor can query with RECALL; the instructions say so instead of "gone for good".
+ARCHIVE_PROMPT_VERSION = "edit-v8-arc"
 
-EDIT_INSTRUCTIONS = """\
+_EDIT_TEMPLATE = """\
 The context is shown as numbered blocks. It is close to its size limit, so free space by editing it.
 Your edits are judged by whether the assistant can still complete its task afterwards, not by how
 much space you free.
@@ -62,13 +65,42 @@ Allowed edits (blocks 0 and 1 cannot be edited):
 - {"op": "replace", "id": <block id>, "text": "<new text>"} rewrites one block.
 - {"op": "note", "text": "<text>"} adds lines to the notes block right after block 1 (it is created
   on first use and cannot be deleted).
-The notes block holds only what you write into it. A deleted block is gone for good: nothing in it
-is saved unless you noted it. So whenever you delete blocks that hold lines the task needs, copy
-those lines from them into a note in the same reply, every time, not only the first time. Lines the
-notes block already holds are dropped automatically, so repeating them does no harm.
+{keep_paragraph}
 Your reply is applied as a whole: if any edit is invalid (e.g. it names block 0 or 1), none of your
 edits are applied. Do not answer the task here.
 Reply with only one JSON object: {"edits": [ ... ]}"""
+
+_GONE_FOR_GOOD = """\
+The notes block holds only what you write into it. A deleted block is gone for good: nothing in it
+is saved unless you noted it. So whenever you delete blocks that hold lines the task needs, copy
+those lines from them into a note in the same reply, every time, not only the first time. Lines the
+notes block already holds are dropped automatically, so repeating them does no harm."""
+
+_ARCHIVED = """\
+The notes block holds only what you write into it. A deleted block is not lost: its text moves to
+an archive outside the context and a one-line placeholder stays in its place. The assistant can bring
+lines back from the archive by key (it writes `RECALL <key>`), so archiving bulky blocks is safe,
+but anything it needs often is cheaper to keep in the context or in a note. Replacing a block also
+archives its old text. Lines the notes block already holds are dropped automatically."""
+
+EDIT_INSTRUCTIONS = _EDIT_TEMPLATE.replace("{keep_paragraph}", _GONE_FOR_GOOD)
+ARCHIVE_EDIT_INSTRUCTIONS = _EDIT_TEMPLATE.replace("{keep_paragraph}", _ARCHIVED)
+ARCHIVE_PLACEHOLDER = "[ARCHIVED block: "
+
+
+def is_placeholder(message: dict) -> bool:
+    return message["content"].startswith(ARCHIVE_PLACEHOLDER)
+
+
+def placeholder(message: dict) -> str:
+    """One line naming an archived block. Angle brackets are dropped so an archived reply that
+    starts with `<<<ANSWER key=...>>>` cannot leave an unterminated sentinel in the context (the KV
+    grader would read it as the start of an ANSWER block and swallow the next real one). 80 chars
+    cannot hold a whole KV value or Needle line, so a placeholder never earns credit by itself."""
+    first = " ".join(message["content"].split("\n", 1)[0].split())
+    first = re.sub(r"[<>]", "", first)
+    return f"{ARCHIVE_PLACEHOLDER}{first[:80]}]"
+
 
 PEER_SYSTEM = (
     "You manage the working context of another assistant that is processing a long task. You never "
@@ -160,8 +192,15 @@ def _is_notes(message: dict) -> bool:
     return message["content"].startswith(NOTES_HEADER)
 
 
-def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
-    """Apply a reply's edits as one unit. Ids refer to the pre-edit numbering."""
+def apply_edits(
+    messages: list[dict], edits: list[dict], archive: list[str] | None = None
+) -> EditResult:
+    """Apply a reply's edits as one unit. Ids refer to the pre-edit numbering.
+
+    With an `archive` list, a deleted block leaves a one-line placeholder and its text is appended
+    to the archive (a placeholder that is deleted again is simply removed); a replaced block's old
+    text is archived too.
+    """
     deletes, replaces, applied, rejected, warnings = set(), {}, [], [], []
     notes = []
     for edit in edits:
@@ -225,8 +264,13 @@ def apply_edits(messages: list[dict], edits: list[dict]) -> EditResult:
     kept, notes_at = [], None
     for i, m in enumerate(messages):
         if i in deletes:
+            if archive is not None and not is_placeholder(m):
+                archive.append(m["content"])
+                kept.append({**m, "content": placeholder(m)})
             continue
         if i in replaces:
+            if archive is not None and not is_placeholder(m):
+                archive.append(m["content"])
             m = {**m, "content": replaces[i]}
         if i == notes_idx:
             notes_at = len(kept)
