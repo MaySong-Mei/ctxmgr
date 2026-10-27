@@ -27,7 +27,7 @@ from lenient_kv import lenient_score
 
 ALPHA = 0.05
 FROZEN = {
-    "repo_commit": "7956662",  # prefix of the prereg-v1-harness tag on may/track2-baseline
+    "repo_commit": "33b3997",  # prefix of the prereg-v1-harness tag on may/track2-baseline
     "contextbench_commit": "fb533c18c78a82d3f1b2047a9c1700735cf829ae",
     "precision": "bf16",
     "served_max_len": 81920,
@@ -189,12 +189,14 @@ def load(seeds: set, dry_run: bool) -> dict:
         else:
             manifest = json.loads((run / "instances" / d.name / "manifest.json").read_text())
             check_setup(e, actor, cond, manifest["n_ops"], d)
-        if not (d / "score.json").exists():
-            score = 0.0
+        if not any((d / "context_snapshots").glob("turn-*.json")):
+            score = 0.0  # ended before any snapshot (e.g. server_rejected on turn 1)
         elif family == KV:
             score = lenient_score(d, run / "instances" / d.name)
-        else:
+        elif (d / "score.json").exists():
             score = json.loads((d / "score.json").read_text())["official"]["reward"]
+        else:
+            raise SystemExit(f"{d}: snapshots but no score.json (scorer failed); rescore first")
         key = (actor, cond, family, level, seed)
         job = int(run.name.rsplit("-", 1)[1])
         if key in found:
@@ -227,6 +229,7 @@ def component(c, seeds, data) -> dict:
     else:
         fav, wrong, symbol = sum(abs(v) < t for v in d), sum(abs(v) > t for v in d), f"|d| < {t:.2f}"
     n = len(d)
+    jobs = sorted({x[3] for x in a} | {y[3] for y in b})
     p, p_opp = binom_sf(fav, n), binom_sf(wrong, n)
     lo, hi = clopper_pearson(fav, n)
     return {
@@ -235,7 +238,7 @@ def component(c, seeds, data) -> dict:
         "p": p,
         "p_opp": p_opp,
         "text": f"{symbol}: {fav}/{n} (95% CI {lo:.2f}-{hi:.2f}), {wrong} opposite; "
-        f"mean d {st.mean(d):+.3f}",
+        f"mean d {st.mean(d):+.3f}; jobs {', '.join(map(str, jobs))}",
     }
 
 

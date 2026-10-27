@@ -7,7 +7,8 @@ edited afterwards; any deviation goes into `docs/preregistration-deviations.md`.
 
 Design rationale: `reports/Validation experiment design check.md`. The rule is derived from
 `docs/results.md` (seeds 42–49). An adversarial review of the draft (blocking issues: test validity,
-unfrozen job settings, rerun rules, R2 tested only at ceiling, analysis outputs) was addressed before
+unfrozen job settings, rerun rules, R2 tested only at ceiling, analysis outputs) and its re-review
+(silent sbatch failures, no partial or single-cell resubmission) were addressed before
 freezing.
 
 ## 1. Hypothesis: the decision rule
@@ -29,7 +30,7 @@ role-separation effect (decoding-sensitive) is not in the confirmatory family.
 
 | Item | Value |
 |---|---|
-| Harness | `may/track2-baseline` tag `prereg-v1-harness` = commit `7956662` (`edit-v8`, `edit-v8-arc`, `rule-mask-v1`) |
+| Harness | `may/track2-baseline` tag `prereg-v1-harness` = commit `33b3997` (`edit-v8`, `edit-v8-arc`, `rule-mask-v1`) |
 | Job submission | `slurm/prereg_submit.sh canary` then `blocks`, run from the cluster worktree checked out detached at the tag; the script refuses any other HEAD or modified tracked files, and sets every job knob explicitly |
 | ContextBench | `fb533c18c78a82d3f1b2047a9c1700735cf829ae`, reply delivery |
 | Serving | vLLM 0.30.0, bf16, one H200 per job (`gpu_h200`), `--max-num-seqs 64`, `--enable-prompt-tokens-details` |
@@ -41,7 +42,7 @@ role-separation effect (decoding-sensitive) is not in the confirmatory family.
 | Seeds | 50–57 ("8") or 50–65 ("16") |
 
 The analysis script enforces this in confirmatory mode: it aborts unless every episode used records
-harness commit `7956662`, the ContextBench commit, bf16, max_len 81,920, the greedy sampling block,
+harness commit `33b3997`, the ContextBench commit, bf16, max_len 81,920, the greedy sampling block,
 the actor and manager models implied by its condition, the edit version of its condition, trigger and
 manager max_tokens (managed conditions), and `max_turns` = 2 × n_ops + 10, and unless both episodes of
 every pair ran the same instance (`instance_sha256`).
@@ -127,8 +128,8 @@ All submitted by `slurm/prereg_submit.sh`.
 | J12 | 27B | KV R1000 | `none_r`, `self_arc`, `mask_arc` | 50–57 | P6 |
 | J13 | 27B | Needle K4-C24 | `none`, `self`, `peer_same` | 50–65 | P8 |
 
-Cells run but not tested (27B `mask_arc` and `none`/`self`, 9B `peer_27b` at R2000, seeds 58–65 of
-J7/J8 outside P3) feed the exploratory cost frontier only.
+Cells run but not tested (27B `mask_arc`, 27B `none` and `self`, 9B `peer_27b` at R2000) feed the
+exploratory cost frontier only. Seeds 58–65 of J7 and J8 are used by P4 and P5 (P3 uses 50–57).
 
 **Canary rule.** C1 and C2 must reproduce the stored greedy results exactly: 9B `peer_27b` Needle
 K4-C24 s46 official 0.8333 (job 30127437), 9B `mask_arc` KV R1000 s46 lenient 1.0000 (job 30939997),
@@ -139,10 +140,14 @@ deviation. If only the cached-token field is null, cost item (2) uses the logged
 ## 7. Exclusions, reruns, stopping, leakage
 
 - Every episode that ends is scored as it ended (`stream_exhausted`, `submit`, `budget_wall`,
-  `max_steps`, `server_rejected`); one that ends without a score file (e.g. rejected on turn 1)
-  scores 0. Counts per ending are reported.
+  `max_steps`, `server_rejected`); one that ends before any context snapshot (e.g. rejected on
+  turn 1) scores 0. A Needle episode with snapshots but no score file (scorer failure) is rescored
+  from its snapshots before the analysis; the script aborts rather than guessing. Counts per ending
+  are reported.
 - An episode stopped by infrastructure (job killed, time limit, node or server failure) at any turn
-  leaves no `episode.json`; it is rerun once, same seed and code, as a job for the missing cells only.
+  leaves no `episode.json`; it is rerun once, same seed and code, with
+  `slurm/prereg_submit.sh rerun <actor> <family:level> <condition> <seed>` (one cell per job, same
+  settings). A whole job that fails to submit is resubmitted with `prereg_submit.sh blocks <Jn>`.
   If the rerun also fails, the prediction using it is reported *incomplete*.
 - No seeds are added after any confirmatory result is seen; the seed sets above are final.
 - Leakage: no episode with seed ≥ 50 has been run. During the design review, instances for seeds
