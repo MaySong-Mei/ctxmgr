@@ -7,7 +7,7 @@ Needle Retention and KV Store under a 32,768-token o200k budget. Managers edit n
 and `peer_27b` (a fixed Qwen3.5-27B manager). Managers are untrained (zero-shot). Each cell has 8 seeds
 (42–49) unless noted; differences are paired on the same instance.
 
-Sources: `docs/tables/episodes_vllm.csv` (1,375 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (1,811 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. Run log: `CLAUDE.md`.
 
 ## Findings
@@ -42,6 +42,23 @@ grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. 
    | Needle K4-C96 (n=4, greedy only) | +0.16 (4/0) | |
 
    Under sampling `self` rises at K4-C24 (0.38 → 0.60) while `peer_same` falls (0.85 → 0.67).
+
+5. **On KV, the harm comes from irreversible deletion, not from management.** With archive-with-recall
+   (removed blocks are archived; the actor writes `RECALL <key>` to bring lines back into context),
+   greedy, 8 seeds, lenient KV:
+
+   | actor | level | none | delete arms | archive arms (self / peer_same / peer_27b / rule) |
+   |---|---|---|---|---|
+   | 9B | R520 | 0.98 | 0.03–0.28 | 0.91 / 0.94 / 0.91 / 0.99 |
+   | 9B | R1000 | 0.00 | 0.08–0.23 | 1.00 / 1.00 / 0.97 / 0.99 |
+   | 4B | R520 | 1.00 | 0.09–0.28 | 0.48 / 0.54 / 0.51 / 0.45 |
+   | 4B | R1000 | 0.00 | 0.05–0.23 | 0.11 / 0.17 / 0.09 / 0.06 |
+
+   For 9B, archiving makes management harmless at R520 and decisive at R1000 (+0.97 to +1.00 over
+   `none`, 8/0), and a no-LLM rule (archive the oldest blocks) does as well as any LLM manager. 4B
+   recalls on only part of the GETs at R520 and never at R1000 (it invents a hash instead), so the
+   limit moves to the actor's retrieval initiative. The 2B actor's ANSWER format breaks when the
+   archive paragraph is added to its instruction (all archive arms score 0), so 2B is excluded.
 
 ## Caveats
 
