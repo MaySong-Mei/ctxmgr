@@ -3,10 +3,13 @@
 # here; nothing is taken from the caller's environment.
 #
 #   git fetch --tags && git checkout --detach prereg-v1-harness   # in the cluster worktree
-#   bash slurm/prereg_submit.sh canary                             # canaries (seeds 46), first
-#   bash slurm/prereg_submit.sh blocks                             # J1-J13 (seeds 50-65), after the canary passes
+#   bash slurm/prereg_submit.sh canary                  # C1, C2 (seed 46), first
+#   bash slurm/prereg_submit.sh blocks                  # J1-J13 (seeds 50-65), after the canary passes
+#   bash slurm/prereg_submit.sh blocks J7 J8            # only the named jobs (e.g. after a failed submit)
+#   bash slurm/prereg_submit.sh rerun 9B kv_store:R1000 mask_arc 53   # one cell, same settings
 #
-# Refuses to submit unless HEAD is the tagged commit and tracked files are unmodified.
+# Refuses to submit unless HEAD is the tagged commit and tracked files are unmodified. Stops at the
+# first failed sbatch.
 set -euo pipefail
 
 TAG=prereg-v1-harness
@@ -43,27 +46,52 @@ big() {  # big <job name> <seeds> <levels> <conditions> <time>
 }
 
 NK4="needle_retention:K4-C24"
+job() {  # job <name>: submit one pre-registered job; print "<name> <slurm id>" or stop
+    local id
+    case "$1" in
+        C1) id=$(small prereg-C1 9B 46 "${NK4} kv_store:R1000" "peer_27b mask_arc" 06:00:00) ;;
+        C2) id=$(big prereg-C2 46 "${NK4}" "none" 06:00:00) ;;
+        J1) id=$(small prereg-J1 2B "${S16}" "${NK4}" "none peer_27b" 24:00:00) ;;
+        J2) id=$(small prereg-J2 4B "${S16}" "${NK4}" "none peer_27b" 24:00:00) ;;
+        J3) id=$(small prereg-J3 9B "${S16}" "${NK4}" "none peer_27b" 24:00:00) ;;
+        J4) id=$(small prereg-J4 2B "${S8}" "${NK4}" "self" 12:00:00) ;;
+        J5) id=$(small prereg-J5 4B "${S8}" "${NK4}" "self" 12:00:00) ;;
+        J6) id=$(small prereg-J6 9B "${S8}" "${NK4}" "self_arc peer_same_arc mask_arc" 24:00:00) ;;
+        J7) id=$(small prereg-J7 9B "${S16}" kv_store:R1000 "none mask_arc peer_27b_arc" 24:00:00) ;;
+        J8) id=$(small prereg-J8 4B "${S16}" kv_store:R1000 "none mask_arc peer_27b_arc" 24:00:00) ;;
+        J9) id=$(small prereg-J9 9B "${S8}" kv_store:R2000 "none peer_27b mask_arc peer_27b_arc" 24:00:00) ;;
+        J10) id=$(small prereg-J10 2B "${S8}" needle_retention:K2-C192 "none peer_27b" 36:00:00) ;;
+        J11) id=$(small prereg-J11 9B "${S8}" needle_retention:K2-C192 "none peer_27b" 36:00:00) ;;
+        J12) id=$(big prereg-J12 "${S8}" kv_store:R1000 "none_r self_arc mask_arc" 24:00:00) ;;
+        J13) id=$(big prereg-J13 "${S16}" "${NK4}" "none self peer_same" 36:00:00) ;;
+        *) echo "unknown job $1"; exit 2 ;;
+    esac
+    [[ -n "${id}" ]] || { echo "$1: sbatch returned no job id; stopping"; exit 1; }
+    echo "$1 ${id}"
+}
+
 case "${1:-}" in
     canary)
-        echo "C1 $(small prereg-C1 9B 46 "${NK4} kv_store:R1000" "peer_27b mask_arc" 06:00:00)"
-        echo "C2 $(big prereg-C2 46 "${NK4}" "none" 06:00:00)"
+        job C1; job C2
         ;;
     blocks)
-        echo "J1 $(small prereg-J1 2B "${S16}" "${NK4}" "none peer_27b" 24:00:00)"
-        echo "J2 $(small prereg-J2 4B "${S16}" "${NK4}" "none peer_27b" 24:00:00)"
-        echo "J3 $(small prereg-J3 9B "${S16}" "${NK4}" "none peer_27b" 24:00:00)"
-        echo "J4 $(small prereg-J4 2B "${S8}" "${NK4}" "self" 12:00:00)"
-        echo "J5 $(small prereg-J5 4B "${S8}" "${NK4}" "self" 12:00:00)"
-        echo "J6 $(small prereg-J6 9B "${S8}" "${NK4}" "self_arc peer_same_arc mask_arc" 24:00:00)"
-        echo "J7 $(small prereg-J7 9B "${S16}" kv_store:R1000 "none mask_arc peer_27b_arc" 24:00:00)"
-        echo "J8 $(small prereg-J8 4B "${S16}" kv_store:R1000 "none mask_arc peer_27b_arc" 24:00:00)"
-        echo "J9 $(small prereg-J9 9B "${S8}" kv_store:R2000 "none peer_27b mask_arc peer_27b_arc" 24:00:00)"
-        echo "J10 $(small prereg-J10 2B "${S8}" needle_retention:K2-C192 "none peer_27b" 36:00:00)"
-        echo "J11 $(small prereg-J11 9B "${S8}" needle_retention:K2-C192 "none peer_27b" 36:00:00)"
-        echo "J12 $(big prereg-J12 "${S8}" kv_store:R1000 "none_r self_arc mask_arc" 24:00:00)"
-        echo "J13 $(big prereg-J13 "${S16}" "${NK4}" "none self peer_same" 36:00:00)"
+        shift
+        names=("$@")
+        [[ ${#names[@]} -gt 0 ]] || names=(J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12 J13)
+        for name in "${names[@]}"; do job "${name}"; done
+        ;;
+    rerun)  # rerun <actor> <family:level> <condition> <seed>: one cell stopped by infrastructure
+        [[ $# -eq 5 ]] || { echo "usage: $0 rerun <actor> <family:level> <condition> <seed>"; exit 2; }
+        if [[ "$2" == 27B ]]; then
+            id=$(big "prereg-R-$4-$5" "$5" "$3" "$4" 36:00:00)
+        else
+            id=$(small "prereg-R-$2-$4-$5" "$2" "$5" "$3" "$4" 36:00:00)
+        fi
+        [[ -n "${id}" ]] || { echo "sbatch returned no job id"; exit 1; }
+        echo "rerun $2 $3 $4 $5 ${id}"
         ;;
     *)
-        echo "usage: $0 canary|blocks"; exit 2
+        echo "usage: $0 canary | blocks [J1 ... J13] | rerun <actor> <family:level> <condition> <seed>"
+        exit 2
         ;;
 esac
