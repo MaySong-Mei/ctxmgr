@@ -564,6 +564,31 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   n.s.). Still at the cap: self 3/8, peer_same 4/8. peer_same - self +0.11 [-0.00, +0.23] (5/2),
   peer_same - none +0.17 (6/0, p=0.031), self - none +0.05 (6/1). The 106-turn cap did not
   materially lower round 22's scores; seeded sampling reproduced peer_same s44-49 exactly.
+- Round 24: archive-with-recall on KV (46756f1; plan in `reports/Context manager experiment plan.md`,
+  experiment 1). Deleted/replaced blocks move to an archive, leaving `[ARCHIVED block: ...]`; the
+  actor may write `RECALL <key>` and the archived lines with that key re-enter the context. Arms:
+  none_r (archive instructions, nothing archived), self_arc, peer_same_arc, peer_27b_arc, mask_arc
+  (rule: archive oldest blocks to half the trigger). Smoke 30937295 (9B R520 s42), grid
+  30939991/4/7 (2B/4B/9B, R520 + R1000, 9 conditions incl. the delete arms, seeds 42-49, greedy,
+  45-75 min each). Lenient KV means:
+  | actor | level | none | none_r | delete arms (self / peer_same / peer_27b) | arc arms (self / peer_same / peer_27b / mask) |
+  |---|---|---|---|---|---|
+  | 9B | R520 | 0.98 | 0.98 | 0.28 / 0.03 / 0.28 | 0.91 / 0.94 / 0.91 / 0.99 |
+  | 9B | R1000 | 0.00 | 0.00 | 0.23 / 0.08 / 0.23 | 1.00 / 1.00 / 0.97 / 0.99 |
+  | 4B | R520 | 1.00 | 1.00 | 0.09 / 0.28 / 0.28 | 0.48 / 0.54 / 0.51 / 0.45 |
+  | 4B | R1000 | 0.00 | 0.00 | 0.05 / 0.23 / 0.22 | 0.11 / 0.17 / 0.09 / 0.06 |
+  | 2B | R520 | 0.46 | 0.00 | 0.45 / 0.40 / 0.12 | 0.00 for all |
+  - 9B: archiving removes the KV harm (arc - none at R520 -0.08..+0.01, n.s.) and at R1000 turns
+    management from 0.08-0.23 into ~1.0 (arc - none +0.97..+1.00, 8/0; arc - delete +0.74..+0.92,
+    8/0). ~23 RECALLs per episode. Manager identity no longer matters: mask_arc (no LLM) equals the
+    LLM arcs (peer_27b_arc - mask_arc -0.02 at R1000, -0.08 at R520, n.s.). Official (hash-exact)
+    scores also rise (9B R1000 0.72-1.00) because recalled lines carry the `#hash`.
+  - 4B: partial at R520 (arc 0.45-0.54 vs delete 0.09-0.28, ~7-10 RECALLs per episode of 24 GETs);
+    at R1000 it never RECALLs and answers with an invented hash, so arc <= delete. The bottleneck
+    is the actor's retrieval initiative.
+  - 2B: the added archive paragraph breaks its ANSWER format (`<<<ANSWER K00310>>>>`, no `key=`),
+    so every archive-instruction arm scores 0 while values are often right; 2B is not interpretable.
+  - 9B `peer_27b` (delete) equals `self` again on every seed (identical edits), as in the greedy grid.
 
 ## Dev
 

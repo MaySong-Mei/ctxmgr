@@ -25,3 +25,6 @@ Other tables:
 - `h200_bf16_pooled.md`: greedy core grid, paired differences vs `none` (`scripts/pooled_grid.py`).
 - `decoding_ablation.md`: greedy vs recommended sampling for the core grid and the 27B role-separation
   comparison (`scripts/decoding_ablation.py`).
+- Archive conditions (round 24, jobs 30937295 and 30939991/4/7): `none_r`, `self_arc`, `peer_same_arc`,
+  `peer_27b_arc` (`edit_version` `edit-v8-arc`) and `mask_arc` (`rule-mask-v1`). Their per-episode
+  RECALL logs are in each run's `recalls.jsonl` (not in this table).
