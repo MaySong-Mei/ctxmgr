@@ -10,6 +10,7 @@ start_server() {
         --max-model-len "${max_len}" \
         --gpu-memory-utilization "${util}" \
         --limit-mm-per-prompt '{"image": 0, "video": 0}' \
+        ${PROMPT_TOKENS_DETAILS:+--enable-prompt-tokens-details} \
         "$@" > "${log}" 2>&1 &
     SERVER_PID=$!
 }
