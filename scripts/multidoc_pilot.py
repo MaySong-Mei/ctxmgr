@@ -176,7 +176,7 @@ def run_case(item, dataset, args, condition, long):
     em, f1 = answer_metrics(parsed["answer"] if parsed else "", item["answer"])
     predicted = set()
     if parsed:
-        for pair in parsed.get("supporting_facts", []):
+        for pair in parsed.get("supporting_facts") or []:
             if (
                 isinstance(pair, list)
                 and len(pair) == 2

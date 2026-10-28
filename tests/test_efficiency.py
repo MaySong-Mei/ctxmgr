@@ -40,3 +40,20 @@ def test_hotpot_scoring_and_format_are_separate():
     assert module.answer_metrics("yes Paris", "yes") == (0, 0)
     assert module.parse_prediction('```json\n{"answer":"Paris"}\n```')["answer"] == "Paris"
     assert module.parse_prediction("Paris") is None
+
+
+def test_efficiency_rejected_or_unknown_models_do_not_look_free():
+    out = summarize_calls(
+        [
+            {
+                "role": "actor",
+                "model": "unknown",
+                "prompt_tokens": 30,
+                "completion_tokens": 5,
+                "cached_prompt_tokens": None,
+                "latency_s": 1,
+            }
+        ]
+    )
+    assert out["total_param_tokens_no_cache"] is None
+    assert out["total_cached_tokens"] is None
