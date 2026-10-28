@@ -7,7 +7,7 @@ Needle Retention and KV Store under a 32,768-token o200k budget. Managers edit n
 and `peer_27b` (a fixed Qwen3.5-27B manager). Managers are untrained (zero-shot). Each cell has 8 seeds
 (42–49) unless noted; differences are paired on the same instance.
 
-Sources: `docs/tables/episodes_vllm.csv` (1,811 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (2,184 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. Run log: `CLAUDE.md`.
 
 ## Findings
@@ -59,6 +59,17 @@ grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. 
    recalls on only part of the GETs at R520 and never at R1000 (it invents a hash instead), so the
    limit moves to the actor's retrieval initiative. The 2B actor's ANSWER format breaks when the
    archive paragraph is added to its instruction (all archive arms score 0), so 2B is excluded.
+
+6. **The decision rule held up under pre-registration.** Ten predictions derived from findings 1–5
+   were committed (`docs/preregistration.md`, tag `prereg-v1`) before running new seeds (50–65) and
+   two held-out levels. **7 confirmed, 3 inconclusive, 0 falsified**; no rule was falsified
+   (`docs/preregistration-results.md`). Confirmed: the 27B manager's Needle gain for 2B/4B/9B (also at
+   the held-out K2-C192 level), small-model self-management not helping, the rule archive manager
+   rescuing 9B KV R1000, the 27B actor's archive arm on KV, archive arms not replacing the 27B manager
+   on Needle, and 2B + 27B manager being no worse than 27B `peer_same`. Inconclusive: the rule
+   manager was *better* than the 27B archive manager rather than equivalent (P4); 4B does use RECALL
+   on some instances when the 27B manager runs the archive (P5); the held-out KV R2000 gain was large
+   (+0.73 to +0.88) but not unanimous at 8 seeds (P9).
 
 ## Caveats
 

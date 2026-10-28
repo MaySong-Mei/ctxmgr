@@ -589,6 +589,14 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - 2B: the added archive paragraph breaks its ANSWER format (`<<<ANSWER K00310>>>>`, no `key=`),
     so every archive-instruction arm scores 0 while values are often right; 2B is not interpretable.
   - 9B `peer_27b` (delete) equals `self` again on every seed (identical edits), as in the greedy grid.
+- Round 25: pre-registered validation of the decision rule. Design review
+  (`reports/Validation experiment design check.md`), two adversarial reviews, freeze with tags
+  `prereg-v1` (track3) and `prereg-v1-harness` (track2, 33b3997). Canaries 30980396/7: two of three
+  reproduced; 9B peer_27b s46 gave 0.67 vs 0.83 (identical prompt, different greedy reply at turn 6:
+  server-state non-determinism; deviation D1). Blocks J1-J13 = jobs 30981378-30981390 (13 H200 jobs,
+  12 done in < 1 h each, 27B J13 ~8 h). Frozen analysis: 7/10 confirmed (P1, P2, P3, P6, P7, P8,
+  P10), 3 inconclusive (P4, P5, P9), 0 falsified; R1-R3 not falsified. Details:
+  `docs/preregistration-results.md`.
 
 ## Dev
 
