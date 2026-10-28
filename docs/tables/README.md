@@ -28,3 +28,6 @@ Other tables:
 - Archive conditions (round 24, jobs 30937295 and 30939991/4/7): `none_r`, `self_arc`, `peer_same_arc`,
   `peer_27b_arc` (`edit_version` `edit-v8-arc`) and `mask_arc` (`rule-mask-v1`). Their per-episode
   RECALL logs are in each run's `recalls.jsonl` (not in this table).
+- Pre-registered runs (round 25): canaries 30980396/7 (seed 46) and jobs 30981378–30981390
+  (seeds 50–65), harness `33b3997`; analysed only by `scripts/prereg_analysis.py`
+  (`docs/preregistration-results.md`).
