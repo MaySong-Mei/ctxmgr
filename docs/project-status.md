@@ -112,3 +112,7 @@ The initial task code and local oracle validation are done. Track 1 is not finis
 - Prompt versions, output caps, sampling settings, pilot seeds and run-log schema.
 
 The local task config offers concrete levels/seeds; these decisions should be recorded here or linked from a versioned config before the main comparison. No cluster job, GitHub publication or teammate notification is implied by this handoff.
+
+## Efficiency follow-up (Ruthvik, 2026-10-27)
+
+Dedicated `ruthvik/efficiency-pilot` branch combines the current harness and published results, retaining the harness dependency lock/server helpers on merge conflicts. Added elapsed-time instrumentation without changing benchmark/edit semantics, historical per-role token/latency extraction, controlled cache-reset timing jobs and an exploratory HotpotQA-derived streaming QA pilot. Detailed design, sample selection, metrics and limitations: `docs/efficiency-pilot.md`. Submission requires passing setup/tests and a smoke job; full jobs run at most two concurrently. Historical artifacts and cached weights are read from the team's normal group-readable directories without modifying them. No completed-run claim is implied here; inspect the submission manifest and Slurm.

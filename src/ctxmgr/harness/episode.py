@@ -7,6 +7,7 @@ Layout follows `docs/log_schema.md`: ContextBench writes `context_snapshots/`, `
 
 import json
 import subprocess
+import time
 from importlib.metadata import version
 from pathlib import Path
 
@@ -66,6 +67,7 @@ def run_episode(
     # under peer_27b ran 53,920 turns in job 30069167). Ends as `max_steps`, which is recorded.
     max_turns = max_turns_per_op * manifest["n_ops"] + MAX_TURNS_SLACK
     terminated_by, error = None, None
+    started = time.monotonic()
     try:
         result = run(
             agent, instance_dir, budget=BUDGET, reserve=RESERVE, out_dir=out, max_turns=max_turns
@@ -75,7 +77,9 @@ def run_episode(
         # ContextBench writes no result.json when the agent raises; keep what we know.
         terminated_by, error = "server_rejected", str(rejected)[:2000]
 
+    runner_elapsed = time.monotonic() - started
     episode = {
+        "runner_elapsed_s": runner_elapsed,
         "family": manifest["family"],
         "level": manifest["level"],
         "seed": manifest["seed"],
@@ -116,6 +120,9 @@ def run_episode(
 
     score = None
     if any((out / "context_snapshots").glob("turn-*.json")):
+        evaluation_started = time.monotonic()
         score = score_run(instance_dir, out)
+        episode["evaluation_elapsed_s"] = time.monotonic() - evaluation_started
+        _write_json(out / "episode.json", episode)
         _write_json(out / "score.json", score)
     return {"episode": episode, "score": score}
