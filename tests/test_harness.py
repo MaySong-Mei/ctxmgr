@@ -151,3 +151,15 @@ def test_max_turns_per_op_raises_the_turn_cap(tmp_path):
     )
     n_ops = json.loads((instance / "manifest.json").read_text())["n_ops"]
     assert outcome["episode"]["max_turns"] == 3 * n_ops + 10
+
+
+def test_peer_size_condition_must_match_the_manager_model():
+    from ctxmgr.harness.__main__ import CONDITIONS, manager_size_matches
+
+    assert {"peer_4b", "peer_9b"} <= CONDITIONS.keys()
+    assert manager_size_matches("peer_9b", "Qwen/Qwen3.5-9B")
+    assert manager_size_matches("peer_27b", "Qwen/Qwen3.5-27B")
+    assert manager_size_matches("peer_27b_arc", "Qwen/Qwen3.5-27B")
+    assert not manager_size_matches("peer_9b", "Qwen/Qwen3.5-27B")
+    assert not manager_size_matches("peer_4b", "Qwen/Qwen3.5-0.8B")
+    assert manager_size_matches("peer_same", "Qwen/Qwen3.5-2B")

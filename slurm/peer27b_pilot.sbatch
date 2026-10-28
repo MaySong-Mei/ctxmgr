@@ -94,7 +94,7 @@ for SEED in ${SEEDS}; do
         for cond in ${CONDITIONS}; do
             echo "===== ${TAG} ${cond} ${name} ====="
             extra=()
-            [[ "${cond}" == peer_27b* ]] && extra=(--manager-base-url "http://127.0.0.1:${P1}/v1" \
+            [[ "${cond}" == peer_[0-9]* ]] && extra=(--manager-base-url "http://127.0.0.1:${P1}/v1" \
                 --manager-model "${MANAGER}")
             if [[ -n "${SAMPLING}" ]]; then
                 read -r -a sampling_args <<< "${SAMPLING}"

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import openai
@@ -21,6 +22,9 @@ CONDITIONS = {
     "self": SelfManagedAgent,
     "peer_same": PeerManagedAgent,
     "peer_27b": PeerManagedAgent,
+    # Manager-size ladder: a fixed external manager of another size (served as MANAGER).
+    "peer_4b": PeerManagedAgent,
+    "peer_9b": PeerManagedAgent,
     # Archive-with-recall arms: removed blocks go to an archive the actor can RECALL from.
     # `none_r` is `none` with the archive instructions (a prompt control; nothing is ever archived).
     "none_r": NoManagementAgent,
@@ -31,6 +35,12 @@ CONDITIONS = {
 }
 ARCHIVE_CONDITIONS = {"none_r", "self_arc", "peer_same_arc", "peer_27b_arc", "mask_arc"}
 UNMANAGED = {"none", "none_r"}
+
+
+def manager_size_matches(condition: str, manager_model: str | None) -> bool:
+    """`peer_9b` must be served by a `...-9B` model (so a run is never labelled with the wrong size)."""
+    size = re.match(r"peer_(\d+(?:\.\d+)?b)(?:_|$)", condition)
+    return size is None or (manager_model or "").lower().endswith(f"-{size.group(1)}")
 
 
 def main():
@@ -77,8 +87,10 @@ def main():
         kwargs["trigger"] = args.trigger
         kwargs["manager_max_tokens"] = args.manager_max_tokens
     if args.condition.startswith("peer"):
-        if args.condition.startswith("peer_27b") and not args.manager_model:
+        if not args.condition.startswith("peer_same") and not args.manager_model:
             parser.error(f"{args.condition} needs --manager-model")
+        if not manager_size_matches(args.condition, args.manager_model):
+            parser.error(f"{args.condition} does not match manager {args.manager_model}")
         manager_url = args.manager_base_url or args.base_url
         kwargs["manager_client"] = openai.OpenAI(
             base_url=manager_url, api_key="EMPTY", timeout=args.timeout
