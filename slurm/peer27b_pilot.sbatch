@@ -28,6 +28,8 @@ TRIGGER="${TRIGGER:-18432}"
 # Extra harness sampling flags, e.g. "--temperature 0.7 --top-p 0.8 --top-k 20" (default: greedy).
 # With SAMPLING set, each request also gets --sampling-seed <instance seed>.
 SAMPLING="${SAMPLING:-}"
+# Manager-prompt variant (management.EDIT_VARIANTS), passed to managed conditions only.
+EDIT_VARIANT="${EDIT_VARIANT:-}"
 # Manager context is bounded by its KV share (27B at 0.79 holds one ~49K request). The actor gets
 # more: on Needle the Qwen/o200k ratio reaches ~1.78, so 49,152 rejected a `none` episode before
 # the o200k wall (job 30046489, s49).
@@ -44,7 +46,7 @@ RUNS="${PROJECT_DIR}/runs/peer27b-${J}"
 
 echo "host=$(hostname) job=${J} actor=${ACTOR} manager=${MANAGER} conditions=${CONDITIONS}"
 echo "levels=${LEVELS} seeds=${SEEDS} trigger=${TRIGGER} max_len=${MAX_LEN} actor_max_len=${ACTOR_MAX_LEN} commit=$(git rev-parse --short HEAD)"
-echo "sampling=${SAMPLING:-greedy}"
+echo "sampling=${SAMPLING:-greedy} edit_variant=${EDIT_VARIANT:-none}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
 uv sync --locked --group serve --quiet || exit 1
@@ -96,6 +98,9 @@ for SEED in ${SEEDS}; do
             extra=()
             [[ "${cond}" == peer_[0-9]* ]] && extra=(--manager-base-url "http://127.0.0.1:${P1}/v1" \
                 --manager-model "${MANAGER}")
+            if [[ -n "${EDIT_VARIANT}" && "${cond}" != none && "${cond}" != none_r ]]; then
+                extra+=(--edit-variant "${EDIT_VARIANT}")
+            fi
             if [[ -n "${SAMPLING}" ]]; then
                 read -r -a sampling_args <<< "${SAMPLING}"
                 extra+=("${sampling_args[@]}" --sampling-seed "${SEED}")

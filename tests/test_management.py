@@ -397,3 +397,13 @@ def test_v8_bare_edit_object_is_read_as_one_edit_and_marked():
     assert result.applied == [{"op": "delete", "ids": [3], "wrapped_bare_edit": True}]
     # A bare object without an op or inferable fields is still an error.
     assert management.parse_edits('{"foo": 1}')[1] == "missing 'edits' list"
+
+
+def test_edit_variants_insert_before_the_reply_line_and_default_is_unchanged():
+    assert (
+        management.with_variant(management.EDIT_INSTRUCTIONS, None) == management.EDIT_INSTRUCTIONS
+    )
+    for name, text in management.EDIT_VARIANTS.items():
+        out = management.with_variant(management.EDIT_INSTRUCTIONS, name)
+        assert text in out and out.endswith('Reply with only one JSON object: {"edits": [ ... ]}')
+        assert "needle" not in text.lower()

@@ -35,8 +35,10 @@ def _edit_version(agent: ChatAgent) -> str | None:
     if not hasattr(agent, "edits"):
         return None  # none / none_r
     if getattr(agent, "editor", None) == "rule":
-        return "rule-mask-v1"
-    return ARCHIVE_PROMPT_VERSION if agent.use_archive else EDIT_PROMPT_VERSION
+        return agent.rule_version
+    version = ARCHIVE_PROMPT_VERSION if agent.use_archive else EDIT_PROMPT_VERSION
+    variant = getattr(agent, "edit_variant", None)
+    return f"{version}+{variant}" if variant else version
 
 
 def _write_json(path: Path, data: dict) -> None:

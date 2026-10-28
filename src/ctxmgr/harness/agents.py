@@ -200,6 +200,7 @@ class ManagedAgent(ChatAgent):
     # Edit replies have their own output budget: the actor's 2,048 matches the benchmark reserve, but a
     # manager output never enters the actor's context, and 2,048 cut off 27B notes of ~54 needles.
     manager_max_tokens: int = 4096
+    edit_variant: str | None = None  # key of management.EDIT_VARIANTS; None = plain edit-v8
     edits: list[dict] = field(default_factory=list)
 
     def reset(self, system: str, instruction: str) -> None:
@@ -240,9 +241,12 @@ class ManagedAgent(ChatAgent):
 
     @property
     def instructions(self) -> str:
-        if self.use_archive:
-            return management.ARCHIVE_EDIT_INSTRUCTIONS
-        return management.EDIT_INSTRUCTIONS
+        base = (
+            management.ARCHIVE_EDIT_INSTRUCTIONS
+            if self.use_archive
+            else management.EDIT_INSTRUCTIONS
+        )
+        return management.with_variant(base, self.edit_variant)
 
 
 @dataclass
@@ -296,6 +300,7 @@ class MaskAgent(ManagedAgent):
     archive-and-recover baselines (VISTA's Auto-Archive + Recover, observation masking)."""
 
     editor = "rule"
+    rule_version = "rule-mask-v1"
     use_archive: bool = True
     target_fraction: float = 0.5
     keep_last: int = 2
@@ -320,6 +325,51 @@ class MaskAgent(ManagedAgent):
             )
         else:
             result = management.EditResult([], "nothing left to archive")
+        self.edits.append(
+            {
+                "turn": self.turn,
+                "editor": self.editor,
+                "trigger": "threshold",
+                "context_before_o200k": before,
+                "context_after_o200k": count_tokens(self.messages)[0],
+                "applied": result.applied,
+                "error": result.error,
+                "reply": "",
+            }
+        )
+
+
+NEEDLE_LINE_RE = re.compile(r"^\[n\d+i\d+#[0-9a-f]+\].*$", re.MULTILINE)
+
+
+@dataclass
+class RuleNeedleAgent(ManagedAgent):
+    """Condition `rule_needle`: a task-aware rule, not a model. Past the trigger, every needle line
+    (`[n...i...#hash] ...`) in the older blocks is copied into the notes block and those blocks are
+    deleted; the latest operation and reply are kept. It uses the instance's self-labelled format,
+    so it is an upper-bound control for Needle Retention, not a general manager."""
+
+    editor = "rule"
+    rule_version = "rule-needle-v1"
+    keep_last: int = 2
+
+    def before_turn(self) -> None:
+        before = count_tokens(self.messages)[0]
+        if before <= self.trigger:
+            return
+        ids = [
+            i
+            for i in range(management.PROTECTED, len(self.messages) - self.keep_last)
+            if not management._is_notes(self.messages[i])
+        ]
+        lines = [line for i in ids for line in NEEDLE_LINE_RE.findall(self.messages[i]["content"])]
+        edits = ([{"op": "note", "text": "\n".join(lines)}] if lines else []) + (
+            [{"op": "delete", "ids": ids}] if ids else []
+        )
+        if edits:
+            result = management.apply_edits(self.messages, edits)
+        else:
+            result = management.EditResult([], "nothing to edit")
         self.edits.append(
             {
                 "turn": self.turn,

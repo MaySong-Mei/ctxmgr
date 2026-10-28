@@ -87,6 +87,28 @@ EDIT_INSTRUCTIONS = _EDIT_TEMPLATE.replace("{keep_paragraph}", _GONE_FOR_GOOD)
 ARCHIVE_EDIT_INSTRUCTIONS = _EDIT_TEMPLATE.replace("{keep_paragraph}", _ARCHIVED)
 ARCHIVE_PLACEHOLDER = "[ARCHIVED block: "
 
+# Instruction variants (manager-prompt sensitivity check; v8 itself was tuned while watching the 27B
+# manager). Each is generic (no task words) and inserted before the final "Reply with ..." line.
+EDIT_VARIANTS = {
+    # one worked example of the copy-then-delete pattern
+    "example": """\
+Example: if block 5 holds two lines the task needs among filler and blocks 6-9 hold nothing it needs,
+a good reply is {"edits": [{"op": "note", "text": "<needed line 1, copied exactly>\\n<needed line 2,
+copied exactly>"}, {"op": "delete", "from": 5, "to": 9}]}.""",
+    # the copy rule stated as a hard requirement, plus range syntax
+    "mustnote": """\
+Required: every reply that deletes or replaces blocks must also contain one note with every line
+from those blocks that block 1 says to keep, copied exactly. A reply that deletes such lines without
+noting them is wrong. Use "from"/"to" ranges rather than long id lists.""",
+}
+
+
+def with_variant(instructions: str, variant: str | None) -> str:
+    if not variant:
+        return instructions
+    head, last = instructions.rsplit("\n", 1)
+    return f"{head}\n{EDIT_VARIANTS[variant]}\n{last}"
+
 
 def is_placeholder(message: dict) -> bool:
     return message["content"].startswith(ARCHIVE_PLACEHOLDER)

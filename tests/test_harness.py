@@ -163,3 +163,17 @@ def test_peer_size_condition_must_match_the_manager_model():
     assert not manager_size_matches("peer_9b", "Qwen/Qwen3.5-27B")
     assert not manager_size_matches("peer_4b", "Qwen/Qwen3.5-0.8B")
     assert manager_size_matches("peer_same", "Qwen/Qwen3.5-2B")
+
+
+def test_rule_needle_keeps_every_needle_and_scores_full_with_a_minimal_actor(tmp_path):
+    from ctxmgr.harness.agents import RuleNeedleAgent
+    from ctxmgr.harness.episode import run_episode as run
+
+    instance = tmp_path / "needle"
+    generate_instance("needle_retention", "K4-C24", 42, instance)
+    completions = FakeCompletions()
+    client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+    agent = RuleNeedleAgent(client=client, model="fake/model", sampling=Sampling())
+    outcome = run(agent, instance, tmp_path / "run", condition="rule_needle")
+    assert outcome["episode"]["edit_prompt_version"] == "rule-needle-v1"
+    assert outcome["score"]["official"]["reward"] == 1.0

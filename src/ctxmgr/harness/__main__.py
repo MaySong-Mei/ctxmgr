@@ -12,10 +12,12 @@ from .agents import (
     MaskAgent,
     NoManagementAgent,
     PeerManagedAgent,
+    RuleNeedleAgent,
     Sampling,
     SelfManagedAgent,
 )
 from .episode import MAX_TURNS_PER_OP, run_episode
+from .management import EDIT_VARIANTS
 
 CONDITIONS = {
     "none": NoManagementAgent,
@@ -32,6 +34,8 @@ CONDITIONS = {
     "peer_same_arc": PeerManagedAgent,
     "peer_27b_arc": PeerManagedAgent,
     "mask_arc": MaskAgent,
+    # Task-aware rule for Needle (copies needle lines, deletes the rest): an upper-bound control.
+    "rule_needle": RuleNeedleAgent,
 }
 ARCHIVE_CONDITIONS = {"none_r", "self_arc", "peer_same_arc", "peer_27b_arc", "mask_arc"}
 UNMANAGED = {"none", "none_r"}
@@ -75,6 +79,11 @@ def main():
         default=MAX_TURNS_PER_OP,
         help="safety stop: max_turns = this x n_ops + slack",
     )
+    cmd.add_argument(
+        "--edit-variant",
+        choices=sorted(EDIT_VARIANTS),
+        help="manager-prompt variant added to edit-v8 (default: none)",
+    )
     cmd.add_argument("--manager-base-url", help="peer manager server (default: --base-url)")
     cmd.add_argument("--manager-model", help="peer manager model (peer_same: same as --model)")
     args = parser.parse_args()
@@ -86,6 +95,8 @@ def main():
     if args.condition not in UNMANAGED:
         kwargs["trigger"] = args.trigger
         kwargs["manager_max_tokens"] = args.manager_max_tokens
+        if args.edit_variant:
+            kwargs["edit_variant"] = args.edit_variant
     if args.condition.startswith("peer"):
         if not args.condition.startswith("peer_same") and not args.manager_model:
             parser.error(f"{args.condition} needs --manager-model")
