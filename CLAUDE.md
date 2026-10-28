@@ -597,6 +597,19 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   12 done in < 1 h each, 27B J13 ~8 h). Frozen analysis: 7/10 confirmed (P1, P2, P3, P6, P7, P8,
   P10), 3 inconclusive (P4, P5, P9), 0 falsified; R1-R3 not falsified. Details:
   `docs/preregistration-results.md`.
+- Round 26: manager-size ladder on Needle (harness 527811a: `peer_4b` / `peer_9b`, any `peer_<size>`
+  uses the MANAGER server; CLI refuses a size mismatch). Jobs 31069247/8/9 (0.8B/2B/4B actor, 9B
+  manager; fresh `none` and `peer_same` in the same job) and 31069250/1 (0.8B/2B actor, 4B manager);
+  K4-C24 + K8-C48, seeds 42-49, greedy, 7-30 min each. `peer_27b` from the pooled grid.
+  K4-C24 means (none 0.33): `peer_4b` 0.24 / 0.34 (0.8B / 2B), `peer_9b` 0.16 / 0.16 / 0.16
+  (0.8B / 2B / 4B; -0.17..-0.18, 0/7-0/8), `peer_27b` 0.97 / 1.00 / 0.80. K8-C48: `peer_9b`
+  -0.09..-0.11 (0/8 each), `peer_4b` 0.00 / +0.03, `peer_27b` +0.11..+0.17.
+  Mechanism: the 9B manager's edits apply (4-10 events, nearly all applied) but it deletes every
+  block from 2 to the end without noting needles first (e.g. 2B s46: 29,267 -> 578 tokens, 9 needle
+  lines left, reward 0.04); the 27B manager notes the needles before each delete (97 lines kept,
+  1.00). So 9B's harm is edit judgment / instruction adherence, not the actor role (as a manager it
+  cannot submit) and not the JSON protocol. Zero-shot editing judgment appears only between 9B and
+  27B in this family.
 
 ## Dev
 

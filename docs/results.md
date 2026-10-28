@@ -7,7 +7,7 @@ Needle Retention and KV Store under a 32,768-token o200k budget. Managers edit n
 and `peer_27b` (a fixed Qwen3.5-27B manager). Managers are untrained (zero-shot). Each cell has 8 seeds
 (42–49) unless noted; differences are paired on the same instance.
 
-Sources: `docs/tables/episodes_vllm.csv` (2,184 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (2,360 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. Run log: `CLAUDE.md`.
 
 ## Findings
@@ -70,6 +70,21 @@ grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. 
    manager was *better* than the 27B archive manager rather than equivalent (P4); 4B does use RECALL
    on some instances when the 27B manager runs the archive (P5); the held-out KV R2000 gain was large
    (+0.73 to +0.88) but not unanimous at 8 seeds (P9).
+
+7. **The manager must be large: a 9B manager hurts, only 27B helps.** Manager-size ladder on Needle
+   (greedy, 8 seeds, paired with `none` run in the same job), mean reward:
+
+   | actor | level | `none` | 4B manager | 9B manager | 27B manager |
+   |---|---|---|---|---|---|
+   | 0.8B | K4-C24 | 0.33 | 0.24 | 0.16 | 0.97 |
+   | 2B | K4-C24 | 0.33 | 0.34 | 0.16 | 1.00 |
+   | 4B | K4-C24 | 0.33 | — | 0.16 | 0.80 |
+   | 0.8B / 2B / 4B | K8-C48 | 0.15–0.17 | 0.17 / 0.17 / — | 0.05–0.06 | 0.27–0.31 |
+
+   The 9B manager lowers every actor on every seed (0/7–0/8). Its edits are well-formed and applied,
+   but it deletes all blocks without first copying the needles into the notes block, while the 27B
+   manager copies them before each delete. A 4B manager changes little. The threshold for zero-shot
+   editing judgment lies between 9B and 27B, and 9B's harm as `self` is judgment, not the actor role.
 
 ## Caveats
 
