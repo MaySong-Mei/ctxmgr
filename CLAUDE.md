@@ -610,6 +610,17 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   1.00). So 9B's harm is edit judgment / instruction adherence, not the actor role (as a manager it
   cannot submit) and not the JSON protocol. Zero-shot editing judgment appears only between 9B and
   27B in this family.
+- Round 27: prompt variants and a live rule (harness bc94295 `--edit-variant`, logged as
+  `edit-v8+<variant>`; 9b37541 offline rule simulation). Jobs 31255823/4 (2B actor, 9B manager,
+  example / mustnote), 31255826/7 (4B actor, same), 31255829/30 (2B actor, 27B manager, example /
+  mustnote), 31255831 (2B actor, `rule_needle` + `none`); Needle K4-C24 + K8-C48, seeds 42-49,
+  greedy, 11-49 min each. Diff vs `none` (K4-C24 / K8-C48):
+  9B +example 2B +0.03 (4/3) / +0.07 (7/1), 4B -0.04 / -0.02; 9B +mustnote 2B -0.20 (0/8) / -0.05,
+  4B -0.17 (0/8) / -0.10 (0/8); 27B +example +0.04 / +0.02; 27B +mustnote +0.62 (8/0) / +0.26 (8/0).
+  `rule_needle` live: 1.000 on all 16 episodes. Applied notes: 9B example 31/208 events, 9B mustnote
+  4/231, 27B example 16/106, 27B mustnote 59/126. 27B under `example` notes at the first event and
+  then only deletes (the v6 failure). No prompt makes 9B help; the example removes its harm. The
+  27B manager is as prompt-sensitive (example collapses it). `results.md` finding 7 updated.
 
 ## Dev
 
