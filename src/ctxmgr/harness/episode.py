@@ -38,7 +38,9 @@ def _edit_version(agent: ChatAgent) -> str | None:
         return agent.rule_version
     version = ARCHIVE_PROMPT_VERSION if agent.use_archive else EDIT_PROMPT_VERSION
     variant = getattr(agent, "edit_variant", None)
-    return f"{version}+{variant}" if variant else version
+    if variant:
+        version = f"{version}+{variant}"
+    return f"{version}+think" if getattr(agent, "manager_thinking", False) else version
 
 
 def _write_json(path: Path, data: dict) -> None:

@@ -103,9 +103,111 @@ noting them is wrong. Use "from"/"to" ranges rather than long id lists.""",
 }
 
 
+# Paraphrases of the whole edit-v8 instruction (prompt-robustness sweep): same content, same edit
+# syntax and semantics, different wording, order and layout. Written once, before any of them was
+# run, and not tuned afterwards. Delete-mode only (not used with the archive conditions).
+EDIT_PARAPHRASES = {
+    # terse bullet list
+    "para1": """\
+Task: the context below (numbered blocks) is nearly full. Make room by editing it.
+- Success = the assistant can still do its task afterwards. Freeing more space is not the goal.
+- Block 1 is the task instruction. Read it first to learn what must be kept and what will be asked later.
+- Block with nothing the task needs: delete it.
+- Block with needed lines mixed into filler: replace it with just those lines (exact copies), or note
+  those lines and delete the block.
+- Never remove the last copy of anything the task needs. Removing all blocks is almost always a mistake.
+- Notes block: sits right after block 1, holds only what you put in it, is created by your first
+  note, and cannot be deleted. Lines it already has are skipped, so repeating them is harmless.
+- Deleted blocks are gone permanently; only what you noted survives. Each time you delete blocks
+  containing needed lines, note those lines in the same reply, every time.
+- Blocks 0 and 1 cannot be edited. One invalid edit (e.g. naming block 0 or 1) cancels the whole reply.
+- Do not answer the task.
+Edits:
+- {"op": "delete", "ids": [<block ids>]}
+- {"op": "delete", "from": <first id>, "to": <last id>} (inclusive range)
+- {"op": "replace", "id": <block id>, "text": "<new text>"}
+- {"op": "note", "text": "<text>"} (appends to the notes block)
+Reply with only one JSON object: {"edits": [ ... ]}""",
+    # prose, edit syntax first
+    "para2": """\
+You can change the context, which is shown as numbered blocks, with four kinds of edit:
+{"op": "delete", "ids": [<block ids>]} removes the listed blocks; {"op": "delete", "from": <first id>,
+"to": <last id>} removes every block in that range, both ends included; {"op": "replace", "id":
+<block id>, "text": "<new text>"} rewrites a block; and {"op": "note", "text": "<text>"} appends lines
+to a notes block placed directly after block 1, which your first note creates and which can never be
+deleted. Blocks 0 and 1 are off limits.
+The context is about to reach its size limit, so use these edits to free space. What counts is
+whether the assistant can still finish its task once you are done, not how much you remove. Start by
+reading block 1, the task instruction, which tells you what the assistant has to retain and what it
+will be asked about later. A block that contains none of that can be deleted. A block in which some
+needed lines sit among filler should be replaced by exactly those lines, or have those lines noted
+before it is deleted. Do not delete the only copy of anything the task needs; deleting everything is
+nearly always wrong.
+Keep in mind that the notes block contains only what you write into it, and a deleted block is lost
+for good: nothing in it is kept unless you noted it. So every time you delete blocks that contain
+lines the task needs, note those lines in the same reply, not only the first time. Lines already in
+the notes block are dropped automatically, so repeating them costs nothing.
+The reply is applied all at once: if a single edit is invalid, for example because it names block 0
+or 1, nothing is applied. Do not work on the task itself.
+Reply with only one JSON object: {"edits": [ ... ]}""",
+    # numbered procedure
+    "para3": """\
+The numbered blocks below are the assistant's context, and it has almost run out of room. Your job is
+to edit it so that there is space again while the assistant can still carry out its task; you are
+judged on the second part, not on the amount of space freed.
+Work through these steps:
+1. Read block 1 (the task instruction). Work out what information the assistant must keep and what
+   later operations will ask for.
+2. Go through the other blocks. For each one decide: it holds nothing the task needs (delete it), or
+   it holds some needed lines among filler (keep only those lines, copied exactly, by replacing the
+   block, or note them and delete the block).
+3. Make sure you are not deleting the only copy of anything needed. If your plan deletes every block,
+   it is almost certainly wrong.
+4. Put any needed lines from the blocks you delete into a note in this same reply. Do this in every
+   reply, not just the first one: the notes block holds only what you write, and a deleted block is
+   gone for good. Lines already in the notes block are dropped automatically.
+5. Write the reply. Blocks 0 and 1 cannot be edited, and if any edit is invalid none of them is applied.
+Edits you can use:
+- {"op": "delete", "ids": [<block ids>]} removes blocks.
+- {"op": "delete", "from": <first id>, "to": <last id>} removes a run of blocks (both ends included).
+- {"op": "replace", "id": <block id>, "text": "<new text>"} rewrites one block.
+- {"op": "note", "text": "<text>"} adds lines to the notes block right after block 1 (created on first
+  use; it cannot be deleted).
+Do not answer the task here.
+Reply with only one JSON object: {"edits": [ ... ]}""",
+    # rules plus a pre-reply checklist
+    "para4": """\
+Context editing. The context (numbered blocks) is close to its limit; remove what is not needed.
+Rules:
+(a) Your edits are evaluated by whether the assistant can still complete its task, not by space saved.
+(b) Block 1 is the task instruction and defines what must be kept and what will be asked later.
+(c) Blocks 0 and 1 cannot be edited.
+(d) The notes block (directly after block 1) contains only what you add with "note". It is created
+    by the first note and cannot be deleted. Duplicate lines are dropped automatically.
+(e) Deletion is permanent. Content of a deleted block survives only if you noted it.
+(f) A reply is all-or-nothing: one invalid edit and no edit is applied.
+Edits:
+- {"op": "delete", "ids": [<block ids>]}: remove blocks.
+- {"op": "delete", "from": <first id>, "to": <last id>}: remove a range of blocks, both ends included.
+- {"op": "replace", "id": <block id>, "text": "<new text>"}: rewrite one block.
+- {"op": "note", "text": "<text>"}: append lines to the notes block.
+Before replying, check:
+- Does every block you delete hold nothing the task needs? If it holds some needed lines among
+  filler, did you replace it with exactly those lines, or copy them into a note in this reply?
+- Did you note the needed lines of the blocks you delete in this reply, even if you noted other
+  lines in earlier replies?
+- Are you keeping at least one copy of everything the task needs? Deleting every block is almost
+  always wrong.
+Do not answer the task.
+Reply with only one JSON object: {"edits": [ ... ]}""",
+}
+
+
 def with_variant(instructions: str, variant: str | None) -> str:
     if not variant:
         return instructions
+    if variant in EDIT_PARAPHRASES:
+        return EDIT_PARAPHRASES[variant]
     head, last = instructions.rsplit("\n", 1)
     return f"{head}\n{EDIT_VARIANTS[variant]}\n{last}"
 

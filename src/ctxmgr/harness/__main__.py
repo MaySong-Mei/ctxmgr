@@ -17,7 +17,7 @@ from .agents import (
     SelfManagedAgent,
 )
 from .episode import MAX_TURNS_PER_OP, run_episode
-from .management import EDIT_VARIANTS
+from .management import EDIT_PARAPHRASES, EDIT_VARIANTS
 
 CONDITIONS = {
     "none": NoManagementAgent,
@@ -81,8 +81,13 @@ def main():
     )
     cmd.add_argument(
         "--edit-variant",
-        choices=sorted(EDIT_VARIANTS),
-        help="manager-prompt variant added to edit-v8 (default: none)",
+        choices=sorted([*EDIT_VARIANTS, *EDIT_PARAPHRASES]),
+        help="manager-prompt variant added to edit-v8, or a paraphrase replacing it (default: none)",
+    )
+    cmd.add_argument(
+        "--manager-thinking",
+        action="store_true",
+        help="enable Qwen3.5 thinking for edit requests only (the actor keeps --thinking)",
     )
     cmd.add_argument("--manager-base-url", help="peer manager server (default: --base-url)")
     cmd.add_argument("--manager-model", help="peer manager model (peer_same: same as --model)")
@@ -97,6 +102,8 @@ def main():
         kwargs["manager_max_tokens"] = args.manager_max_tokens
         if args.edit_variant:
             kwargs["edit_variant"] = args.edit_variant
+        if args.manager_thinking:
+            kwargs["manager_thinking"] = True
     if args.condition.startswith("peer"):
         if not args.condition.startswith("peer_same") and not args.manager_model:
             parser.error(f"{args.condition} needs --manager-model")

@@ -30,6 +30,10 @@ TRIGGER="${TRIGGER:-18432}"
 SAMPLING="${SAMPLING:-}"
 # Manager-prompt variant (management.EDIT_VARIANTS), passed to managed conditions only.
 EDIT_VARIANT="${EDIT_VARIANT:-}"
+# MANAGER_THINKING=1: thinking on for edit requests (managed conditions only); set MANAGER_MAX_TOKENS
+# high enough for the reasoning (a reply cut off before </think> counts as no reply).
+MANAGER_THINKING="${MANAGER_THINKING:-}"
+MANAGER_MAX_TOKENS="${MANAGER_MAX_TOKENS:-}"
 # Manager context is bounded by its KV share (27B at 0.79 holds one ~49K request). The actor gets
 # more: on Needle the Qwen/o200k ratio reaches ~1.78, so 49,152 rejected a `none` episode before
 # the o200k wall (job 30046489, s49).
@@ -46,7 +50,7 @@ RUNS="${PROJECT_DIR}/runs/peer27b-${J}"
 
 echo "host=$(hostname) job=${J} actor=${ACTOR} manager=${MANAGER} conditions=${CONDITIONS}"
 echo "levels=${LEVELS} seeds=${SEEDS} trigger=${TRIGGER} max_len=${MAX_LEN} actor_max_len=${ACTOR_MAX_LEN} commit=$(git rev-parse --short HEAD)"
-echo "sampling=${SAMPLING:-greedy} edit_variant=${EDIT_VARIANT:-none}"
+echo "sampling=${SAMPLING:-greedy} edit_variant=${EDIT_VARIANT:-none} manager_thinking=${MANAGER_THINKING:-0} manager_max_tokens=${MANAGER_MAX_TOKENS:-default}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
 uv sync --locked --group serve --quiet || exit 1
@@ -100,6 +104,10 @@ for SEED in ${SEEDS}; do
                 --manager-model "${MANAGER}")
             if [[ -n "${EDIT_VARIANT}" && "${cond}" != none && "${cond}" != none_r ]]; then
                 extra+=(--edit-variant "${EDIT_VARIANT}")
+            fi
+            if [[ "${cond}" != none && "${cond}" != none_r ]]; then
+                [[ -n "${MANAGER_THINKING}" ]] && extra+=(--manager-thinking)
+                [[ -n "${MANAGER_MAX_TOKENS}" ]] && extra+=(--manager-max-tokens "${MANAGER_MAX_TOKENS}")
             fi
             if [[ -n "${SAMPLING}" ]]; then
                 read -r -a sampling_args <<< "${SAMPLING}"

@@ -407,3 +407,57 @@ def test_edit_variants_insert_before_the_reply_line_and_default_is_unchanged():
         out = management.with_variant(management.EDIT_INSTRUCTIONS, name)
         assert text in out and out.endswith('Reply with only one JSON object: {"edits": [ ... ]}')
         assert "needle" not in text.lower()
+
+
+class ThinkingKeeper(NeedleKeeper):
+    """NeedleKeeper whose reply starts with reasoning that itself contains a wipe-everything edit."""
+
+    def create(self, *, model, messages, **kwargs):
+        response = super().create(model=model, messages=messages)
+        self.requests[-1]["kwargs"] = kwargs
+        content = response.choices[0].message.content
+        wipe = json.dumps({"edits": [{"op": "delete", "from": 2, "to": 999}]})
+        response.choices[0].message.content = f"Maybe {wipe}? No.\n</think>\n\n{content}"
+        return response
+
+
+def test_manager_thinking_parses_only_the_answer_and_leaves_the_actor_unchanged(tmp_path):
+    instance = tmp_path / "instance"
+    generate_instance("needle_retention", "K4-C24", 42, instance)
+    actor, manager = FakeCompletions(), ThinkingKeeper()
+    agent = PeerManagedAgent(
+        client=client(actor),
+        model="fake/actor",
+        sampling=Sampling(),
+        manager_client=client(manager),
+        manager_model="fake/manager",
+        manager_thinking=True,
+    )
+    out = tmp_path / "run"
+    outcome = run_episode(agent, instance, out, condition="peer_27b", manager_model="fake/manager")
+
+    assert outcome["score"]["official"]["reward"] == 1
+    assert outcome["episode"]["edit_prompt_version"] == "edit-v8+think"
+    assert all(
+        r["kwargs"]["extra_body"]["chat_template_kwargs"]["enable_thinking"]
+        for r in manager.requests
+    )
+    assert not any(
+        r["extra_body"]["chat_template_kwargs"]["enable_thinking"] for r in actor.requests
+    )
+    edits = [json.loads(line) for line in (out / "edits.jsonl").read_text().splitlines()]
+    assert edits and all("</think>" in e["reply"] for e in edits)  # raw reply kept in the log
+
+
+def test_paraphrases_replace_the_instruction_and_keep_the_edit_syntax():
+    for name, text in management.EDIT_PARAPHRASES.items():
+        assert management.with_variant(management.EDIT_INSTRUCTIONS, name) == text
+        assert text.endswith('Reply with only one JSON object: {"edits": [ ... ]}')
+        for syntax in (
+            '{"op": "delete", "ids": [<block ids>]}',
+            '"from": <first id>',
+            '{"op": "replace", "id": <block id>',
+            '{"op": "note", "text": "<text>"}',
+        ):
+            assert syntax in text.replace("\n", " "), (name, syntax)
+        assert "needle" not in text.lower() and "Example" not in text

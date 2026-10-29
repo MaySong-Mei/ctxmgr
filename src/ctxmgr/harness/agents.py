@@ -47,8 +47,9 @@ class Sampling:
     presence_penalty: float | None = None
     seed: int | None = None
 
-    def request_kwargs(self, max_tokens: int | None = None) -> dict:
-        extra = {"chat_template_kwargs": {"enable_thinking": self.thinking}}
+    def request_kwargs(self, max_tokens: int | None = None, thinking: bool | None = None) -> dict:
+        thinking = self.thinking if thinking is None else thinking
+        extra = {"chat_template_kwargs": {"enable_thinking": thinking}}
         if self.top_k is not None:
             extra["top_k"] = self.top_k
         kwargs = {
@@ -152,13 +153,20 @@ class ChatAgent:
         """Context management runs here, after the previous turn was snapshotted."""
 
     def complete(
-        self, messages: list[dict], *, role: str, client=None, model=None, max_tokens=None
+        self,
+        messages: list[dict],
+        *,
+        role: str,
+        client=None,
+        model=None,
+        max_tokens=None,
+        thinking=None,
     ) -> str:
         client, model = client or self.client, model or self.model
         start = time.monotonic()
         try:
             response = client.chat.completions.create(
-                model=model, messages=messages, **self.sampling.request_kwargs(max_tokens)
+                model=model, messages=messages, **self.sampling.request_kwargs(max_tokens, thinking)
             )
         except openai.BadRequestError as error:
             raise ServerRejected(str(error)) from error
@@ -201,6 +209,10 @@ class ManagedAgent(ChatAgent):
     # manager output never enters the actor's context, and 2,048 cut off 27B notes of ~54 needles.
     manager_max_tokens: int = 4096
     edit_variant: str | None = None  # key of management.EDIT_VARIANTS; None = plain edit-v8
+    # Thinking for edit requests only (the actor keeps Sampling.thinking). The server runs without a
+    # reasoning parser, so the reply holds the reasoning; only the text after the last </think> is
+    # parsed, and a reply cut off before it counts as no reply.
+    manager_thinking: bool = False
     edits: list[dict] = field(default_factory=list)
 
     def reset(self, system: str, instruction: str) -> None:
@@ -218,7 +230,10 @@ class ManagedAgent(ChatAgent):
             reply, rejected_error = "", f"server rejected the edit request: {str(rejected)[:300]}"
         else:
             rejected_error = None
-        proposed, error = management.parse_edits(reply)
+        answer = reply
+        if self.manager_thinking:
+            answer = reply.rsplit("</think>", 1)[1] if "</think>" in reply else ""
+        proposed, error = management.parse_edits(answer)
         error = rejected_error or error
         result = management.apply_edits(
             self.messages, proposed, self.archive if self.use_archive else None
@@ -263,6 +278,7 @@ class SelfManagedAgent(ManagedAgent):
         return self.complete(
             [*self.messages, {"role": "user", "content": request}],
             role="self_manager",
+            thinking=self.manager_thinking or None,
             max_tokens=self.manager_max_tokens,
         )
 
@@ -286,6 +302,7 @@ class PeerManagedAgent(ManagedAgent):
                 {"role": "user", "content": request},
             ],
             role="manager",
+            thinking=self.manager_thinking or None,
             client=self.manager_client,
             model=self.manager_model,
             max_tokens=self.manager_max_tokens,
