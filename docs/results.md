@@ -9,7 +9,8 @@ and `peer_<size>` (a fixed manager of another size; mainly `peer_27b`). Managers
 Greedy decoding with thinking off unless noted.
 
 Sources: `docs/tables/episodes_vllm.csv` (2,872 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
-grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. Run log: `CLAUDE.md`.
+grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/tables/cost_needle.md` (compute
+per episode), `docs/figures/`. Run log: `CLAUDE.md`.
 Two adversarial reviews (novelty and robustness, 2026-10-28) shaped the wording below; their main
 points are in "Limits" at the end.
 
@@ -173,6 +174,50 @@ points are in "Limits" at the end.
    editing judgment depends on both size and reasoning: reasoning alone rescues 9B with the 2B actor,
    and with reasoning on both, 27B stays ahead (8/0 with the 4B actor). Findings 1–2 and the ladder
    above are without thinking.
+
+8. **A 27B compactor costs about (manager size / actor size) × the actor's compute: cheaper than a
+   27B system, far above a rule.** Prefix-reuse FLOPs (CLM Eq. 8–9, constants from each
+   `config.json`; the 27B gives CLM's 48.70 GFLOP/token and 3.93×10⁵ per query-key pair) with the
+   prefix-cache hits vLLM measured, and GPU-seconds (summed call latency; actor and manager share one
+   H200, one call at a time). Means per episode from `docs/tables/cost_needle.md`, which covers only
+   runs that logged cache hits (rounds 25–28):
+
+   | level | system | reward | PFLOPs | manager share | GPU-s |
+   |---|---|---|---|---|---|
+   | K4-C24 | 2B `none` | 0.33 | 0.16 | – | 3 |
+   | K4-C24 | 2B + `rule_needle` | 1.00 | 0.56 | – | 10 |
+   | K4-C24 | 2B + 9B manager | 0.16 | 3.7 | 89% | 80 |
+   | K4-C24 | 2B + 9B manager, thinking | 0.66 | 4.2 | 92% | 190 |
+   | K4-C24 | 2B + 27B manager | 0.99 | 7.5 | 94% | 90 |
+   | K4-C24 | 2B + 27B manager, thinking | 0.93 | 10.0 | 95% | 356 |
+   | K4-C24 | 27B `none` | 0.29 | 2.4 | – | 53 |
+   | K4-C24 | 27B `self` | 0.40 | 13.0 | 10% | 576 |
+   | K4-C24 | 27B `peer_same` | 0.77 | 28.5 | 48% | 1,312 |
+   | K8-C48 | 2B `none` | 0.15 | 0.18 | – | 5 |
+   | K8-C48 | 2B + `rule_needle` | 1.00 | 1.6 | – | 35 |
+   | K8-C48 | 2B + 9B manager, thinking | 0.34 | 6.7 | 93% | 423 |
+   | K8-C48 | 2B + 27B manager (`para2`) | 0.53 | 18.7 | 96% | 281 |
+   | K8-C48 | 2B + 27B manager, thinking | 0.63 | 28.2 | 97% | 1,503 |
+   | K8-C48 | 4B + 27B manager, thinking | 0.82 | 34.8 | 91% | 2,027 |
+
+   - The actor reads each chunk about once (about 73% of its prompt tokens are cache hits). A peer
+     manager re-reads the whole current context (~30K Qwen tokens) at every event and gets almost no
+     cache hits, because each event follows the previous event's edits and the request starts with
+     the changing context size. So manager compute ≈ C_token(manager) / C_token(actor) × actor
+     compute: under the 27B v8 manager, measured 17× for the 2B actor (ratio of constants 17.7),
+     6.4× for 4B (6.8) and 3.7× for 9B (3.5). The self-manager continues the actor's own cache
+     (92–96% hits), its one structural cost advantage.
+   - A small actor with a 27B compactor beats the 27B model managed by a second 27B session at
+     about a quarter of the FLOPs and a fifteenth of the GPU time (2B + 27B: 0.99, 7.5 PF, 90 s;
+     27B `peer_same`: 0.77, 28.5 PF, 1,312 s). The task-aware rule reaches the same score at 1/13 of
+     the FLOPs.
+   - Thinking costs more in time than in FLOPs, because decode is memory-bound. At K4-C24 the 27B
+     manager with thinking uses 1.3× the FLOPs and 4× the GPU time of v8 for no gain; at K8-C48 it
+     adds +0.10 over the best wording without thinking (`para2`) for 1.5× the FLOPs and 5× the GPU
+     time.
+   - `none` is cheap because it stops at the budget wall after about 7 of 24 (K4-C24) or 48 (K8-C48)
+     operations. FLOPs omit norms, softmax and the DeltaNet state update; GPU-seconds are batch-1
+     calls on a shared H200 and do not transfer to other deployments.
 
 ## Limits
 

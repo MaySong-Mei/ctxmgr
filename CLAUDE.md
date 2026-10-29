@@ -639,6 +639,15 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   replaces chunks with their needles or deletes selectively); 27B with thinking notes often
   (4B K8: 81/128). Conclusion: size and reasoning both matter; the 9B/27B gap holds across 7 wordings
   and with thinking on both. `results.md` finding 7 updated.
+- Cost analysis (2026-10-29): `src/ctxmgr/accounting/flops.py` (CLM prefix-reuse FLOPs per call,
+  constants from each Qwen3.5 `config.json`; the 27B reproduces CLM's 48.70 GFLOP/token and
+  3.93e5 per pair, tested in `tests/test_flops.py`) and `scripts/cost_table.py` ->
+  `docs/tables/cost_needle.md` (76 Needle cells, runs with measured `cached_prompt_tokens`, rounds
+  25-28). Peer managers get ~0% cache hits (each event follows the last edits; the request starts
+  with the context size), the actor ~73%, self-managers 92-96%. Manager FLOPs ≈ C_token ratio x actor
+  FLOPs (27B v8: 17x for 2B, 6.4x for 4B, 3.7x for 9B). K4-C24: 2B + 27B 0.99 at 7.5 PF / 90 GPU-s vs
+  27B peer_same 0.77 at 28.5 PF / 1,312 s vs rule 1.00 at 0.56 PF / 10 s. Thinking: 1.3-1.5x FLOPs,
+  4-5x GPU time. `results.md` finding 8.
 
 ## Dev
 
