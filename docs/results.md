@@ -8,7 +8,7 @@ and `peer_<size>` (a fixed manager of another size; mainly `peer_27b`). Managers
 (zero-shot). Each cell has 8 seeds (42–49) unless noted; differences are paired on the same instance.
 Greedy decoding with thinking off unless noted.
 
-Sources: `docs/tables/episodes_vllm.csv` (2,360 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (2,488 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. Run log: `CLAUDE.md`.
 Two adversarial reviews (novelty and robustness, 2026-10-28) shaped the wording below; their main
 points are in "Limits" at the end.
@@ -21,7 +21,8 @@ points are in "Limits" at the end.
    final context. A task-aware rule (`rule_needle`: copy every `[n...#hash]` line into the notes block,
    delete the older blocks; no LLM) with an actor that only advances scores **1.000 at every level**
    (K4-C4 to K2-C192, 8 seeds each; peak context ≈ 22K o200k), while `none` falls from 1.00 to 0.04
-   (`scripts/simulate_rule_needle.py` on `may/track2-baseline`). So on Needle a manager that helps is
+   (`scripts/simulate_rule_needle.py` on `may/track2-baseline`); run live with the 2B actor it also
+   scores 1.000 on all 8 seeds at K4-C24 and K8-C48 (job 31255831). So on Needle a manager that helps is
    doing the retention itself; the actor contributes little (0.8B and 2B score alike under the 27B
    manager). Results 1, 2 and 7 measure how close zero-shot managers get to this rule.
 
@@ -114,8 +115,25 @@ points are in "Limits" at the end.
    the needles (it wrote no `note` in 347 events; 81% of its K4-C24 events applied, and 30 replies were
    runaway id lists that hit the output cap). The v8 prompt was tuned while watching the 27B manager,
    and under the early prompts (v1/v2) the 27B manager failed the same way (0.17 / 0.00 on 2B K4-C24).
-   So this shows a failure mode of an untuned 9B under a 27B-tuned prompt, not yet a size threshold;
-   a prompt-variant check is in progress (round 27).
+   Prompt-variant check (round 27): two generic additions to v8, `example` (one worked
+   note-then-delete reply) and `mustnote` (the copy rule stated as a requirement), same cells:
+
+   | manager, prompt | 2B K4-C24 | 2B K8-C48 | 4B K4-C24 | 4B K8-C48 |
+   |---|---|---|---|---|
+   | 9B v8 | −0.18 (0/8) | −0.09 (0/8) | −0.17 (0/8) | −0.10 (0/8) |
+   | 9B +example | +0.03 (4/3) | +0.07 (7/1) | −0.04 (2/5) | −0.02 (3/5) |
+   | 9B +mustnote | −0.20 (0/8) | −0.05 (2/6) | −0.17 (0/8) | −0.10 (0/8) |
+   | 27B v8 | +0.67 (8/0) | +0.17 (8/0) | +0.46 (8/0) | +0.11 (8/0) |
+   | 27B +example | +0.04 (8/0) | +0.02 (6/2) | | |
+   | 27B +mustnote | +0.62 (8/0) | +0.26 (8/0) | | |
+
+   (difference vs `none` run in the same job; 27B v8 from the pooled grid.) The worked example
+   removes the 9B manager's harm but does not make it help (it notes in 31 of 208 events); stating the
+   rule changes nothing (4 of 231). No prompt brought 9B near 27B. The prompt matters as much for 27B:
+   `example` drops it to `none` level (it notes once at the first event, then only deletes, the v6
+   failure), while `mustnote` keeps K4-C24 and improves K8-C48 (0.40 vs 0.31 under v8). So among the prompts
+   tried, only the 27B manager executes the copy rule, and only under some of them; this is a gap
+   under three prompts, not a proven size threshold.
 
 ## Limits
 
