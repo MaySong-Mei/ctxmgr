@@ -621,6 +621,24 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   4/231, 27B example 16/106, 27B mustnote 59/126. 27B under `example` notes at the first event and
   then only deletes (the v6 failure). No prompt makes 9B help; the example removes its harm. The
   27B manager is as prompt-sensitive (example collapses it). `results.md` finding 7 updated.
+- Round 28: paraphrases and manager thinking (harness 0eec53e: `--edit-variant para1..para4`, four
+  full rewrites of v8 with the same content and syntax, no example; `--manager-thinking` turns on
+  thinking for the manager only, parses the edits after `</think>`, logged as `edit-v8+think`).
+  Needle K4-C24 + K8-C48, seeds 42-49, greedy, `none` in each job. Jobs 31283581/3/5/8 (9B manager,
+  para1-4, 2B actor), 31283589/90/93/96 (27B manager, para1-4), 31262552/3 (9B thinking, 2B/4B actor,
+  16,384 manager tokens; 31262341/2 failed on a LEVELS format slip), 31283597/8 (27B thinking, 2B/4B).
+  Diff vs `none` (K4-C24 / K8-C48), 2B actor: 9B para1 0.00 / -0.02 (all 24 K4 replies runaway delete
+  lists capped at 4,096), para2 -0.10 / -0.10 (0/8), para3 -0.16 / -0.07 (0/8), para4 -0.17 / -0.08
+  (0/8), no note in 445 events; 27B para1 +0.35 / +0.20, para2 +0.61 / +0.39, para3 +0.67 (1.00 every
+  seed) / +0.21, para4 +0.17 / +0.05, all 8/0. Thinking means (2B K4 / 2B K8 / 4B K4 / 4B K8): none
+  0.33 / 0.15 / 0.33 / 0.16; 9B 0.16 / 0.06 / 0.16 / 0.06 -> thinking 0.66 / 0.34 / 0.43 / 0.23; 27B
+  1.00 / 0.31 / 0.80 / 0.27 -> thinking 0.93 / 0.63 / 0.83 / 0.82. 9B thinking - 9B: +0.51 / +0.28
+  (8/0) / +0.27 / +0.17 (7/1); 27B thinking - 9B thinking: +0.27 (7/1) / +0.29 (6/2) / +0.40 (8/0) /
+  +0.59 (8/0). Thinking: 5-8K output tokens per manager call, 8-42% capped at 16,384 (no edit), 27B
+  jobs 4.2 / 6.2 h, 5 of 32 27B episodes at max_steps. 9B with thinking rarely notes (3/234 events;
+  replaces chunks with their needles or deletes selectively); 27B with thinking notes often
+  (4B K8: 81/128). Conclusion: size and reasoning both matter; the 9B/27B gap holds across 7 wordings
+  and with thinking on both. `results.md` finding 7 updated.
 
 ## Dev
 

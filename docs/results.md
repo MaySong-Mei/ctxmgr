@@ -8,7 +8,7 @@ and `peer_<size>` (a fixed manager of another size; mainly `peer_27b`). Managers
 (zero-shot). Each cell has 8 seeds (42–49) unless noted; differences are paired on the same instance.
 Greedy decoding with thinking off unless noted.
 
-Sources: `docs/tables/episodes_vllm.csv` (2,488 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (2,872 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/figures/`. Run log: `CLAUDE.md`.
 Two adversarial reviews (novelty and robustness, 2026-10-28) shaped the wording below; their main
 points are in "Limits" at the end.
@@ -28,8 +28,8 @@ points are in "Limits" at the end.
 
 ## Findings
 
-1. **Only the 27B manager executes the retention rule, and only at low pressure.** `peer_27b` − `none`
-   at Needle K4-C24:
+1. **Without thinking, only the 27B manager executes the retention rule, and only at low pressure.**
+   `peer_27b` − `none` at Needle K4-C24:
 
    | actor | greedy | sampled |
    |---|---|---|
@@ -40,7 +40,7 @@ points are in "Limits" at the end.
 
    That is 0.80–1.00 against the rule's 1.00. At K8-C48 the gain is +0.11 to +0.17 (8/0 for every
    size), i.e. 0.27–0.31 against the rule's 1.00, so even the 27B manager falls far short of the rule
-   once more needles accumulate. Under sampling the 0.8B actor degenerates (130/600 actor calls hit
+   once more needles accumulate (with manager thinking it reaches 0.63–0.82; finding 7). Under sampling the 0.8B actor degenerates (130/600 actor calls hit
    the 2,048-token output cap, none under greedy).
 
 2. **Same-size management does not help small actors.** `self` and `peer_same` equal `none` for
@@ -101,8 +101,9 @@ points are in "Limits" at the end.
    were inconclusive (P4, P5, P9; see the results file). New seeds reuse each level's layout, so only
    P9–P10 test a new layout.
 
-7. **Manager-size ladder: a 9B manager with the v8 prompt hurts; only 27B helps.** Needle, greedy,
-   8 seeds, `none` rerun in the same job:
+7. **Manager-size ladder: without thinking only the 27B manager helps, under seven prompt wordings;
+   with thinking both 9B and 27B help, and 27B stays ahead.** Needle, greedy, 8 seeds, `none` rerun
+   in the same job:
 
    | actor | level | `none` | 4B manager | 9B manager | 27B manager |
    |---|---|---|---|---|---|
@@ -131,9 +132,47 @@ points are in "Limits" at the end.
    removes the 9B manager's harm but does not make it help (it notes in 31 of 208 events); stating the
    rule changes nothing (4 of 231). No prompt brought 9B near 27B. The prompt matters as much for 27B:
    `example` drops it to `none` level (it notes once at the first event, then only deletes, the v6
-   failure), while `mustnote` keeps K4-C24 and improves K8-C48 (0.40 vs 0.31 under v8). So among the prompts
-   tried, only the 27B manager executes the copy rule, and only under some of them; this is a gap
-   under three prompts, not a proven size threshold.
+   failure), while `mustnote` keeps K4-C24 and improves K8-C48 (0.40 vs 0.31 under v8).
+
+   Paraphrases (round 28): four full rewrites of v8 with the same content and edit syntax and no
+   example (`para1` terse bullets, `para2` prose, `para3` numbered procedure, `para4` rules plus a
+   checklist), 2B actor, difference vs `none`:
+
+   | manager, prompt | K4-C24 | K8-C48 |
+   |---|---|---|
+   | 9B para1 / para2 / para3 / para4 | 0.00 (0/0) / −0.10 (0/4) / −0.16 (0/6) / −0.17 (0/6) | −0.02 (1/2) / −0.10 (0/8) / −0.07 (0/8) / −0.08 (0/8) |
+   | 27B para1 / para2 / para3 / para4 | +0.35 / +0.61 / +0.67 / +0.17 (8/0 each) | +0.20 / +0.39 / +0.21 / +0.05 (8/0 each) |
+
+   Over the seven wordings (v8, `example`, `mustnote`, four paraphrases) the 9B manager never helps
+   and is significantly harmful in at least one cell under five; under the paraphrases it wrote no
+   note in 445 events (under `para1` all 24 K4-C24 replies were runaway delete lists cut off at the
+   4,096-token cap, so nothing applied). The 27B manager beats `none` on 8/8 seeds in 13 of 14 cells,
+   but by +0.02 to +0.67, and its score tracks how often it notes before deleting (`para3`: notes in
+   32/32 K4-C24 events, 1.00 on every seed; `para4`: 13/32, 0.51). The direction of the 9B/27B gap
+   is robust to wording; its size is not.
+
+   Manager thinking (round 28): v8 with thinking on for the manager only (actor unchanged, manager
+   output cap 16,384), means:
+
+   | actor | level | `none` | 9B | 9B thinking | 27B | 27B thinking | 27B − 9B, both thinking |
+   |---|---|---|---|---|---|---|---|
+   | 2B | K4-C24 | 0.33 | 0.16 | 0.66 | 1.00 | 0.93 | +0.27 (7/1) |
+   | 2B | K8-C48 | 0.15 | 0.06 | 0.34 | 0.31 | 0.63 | +0.29 (6/2) |
+   | 4B | K4-C24 | 0.33 | 0.16 | 0.43 | 0.80 | 0.83 | +0.40 (8/0) |
+   | 4B | K8-C48 | 0.16 | 0.06 | 0.23 | 0.27 | 0.82 | +0.59 (8/0) |
+
+   Thinking turns the 9B manager from harmful to helpful with the 2B actor (vs 9B without thinking
+   +0.51 and +0.28, 8/0 each; vs `none` +0.33 (7/0, p=0.016) and +0.20 (6/0, p=0.031)); with the 4B
+   actor its gain over `none` is not significant (+0.10, +0.07). It rarely notes (3 of 234 events)
+   and instead replaces chunk blocks with their needle lines or deletes selectively. The 27B manager
+   with thinking is the best manager so far: at K8-C48, where every manager without thinking stayed
+   near 0.3, it reaches 0.63 (2B) and 0.82 (4B; +0.54 over 27B without thinking, 8/0), noting in 42 of
+   93 and 81 of 128 events. Thinking costs 5–8K output tokens per manager call; 8–42% of calls per
+   cell hit the 16,384 cap before the answer (no edit), the 27B thinking jobs took 4–6 h instead of
+   ~0.5 h, and 5 of 32 27B-thinking episodes ended at `max_steps` (scores are lower bounds). So
+   editing judgment depends on both size and reasoning: reasoning alone rescues 9B with the 2B actor,
+   and with reasoning on both, 27B stays ahead (8/0 with the 4B actor). Findings 1–2 and the ladder
+   above are without thinking.
 
 ## Limits
 
@@ -145,6 +184,9 @@ points are in "Limits" at the end.
   separate-session control, crossed with delete vs archive.
 - **Prompt and decoding.** Edit protocol v1–v8 was tuned on the 27B manager with 2B/4B actors (seeds
   46–49). Most results are greedy with thinking off; the 27B role effect does not survive sampling.
+  Manager thinking raises both the 9B and 27B managers a lot (finding 7), so the results without it
+  understate what these models can do as managers; the 27B gain without thinking varies from +0.02
+  to +0.67 across seven zero-shot wordings.
 - **Sample.** Seeds change words, values and queried keys, not the layout of a level; `none` is often
   constant (0.333 on Needle K4-C24), so paired tests are close to one-sample tests. Greedy outputs vary
   with server state (deviation D1), so repeated instances are near-repeats.
