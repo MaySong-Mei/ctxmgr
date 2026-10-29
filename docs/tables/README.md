@@ -25,6 +25,9 @@ Other tables:
 - `h200_bf16_pooled.md`: greedy core grid, paired differences vs `none` (`scripts/pooled_grid.py`).
 - `decoding_ablation.md`: greedy vs recommended sampling for the core grid and the 27B role-separation
   comparison (`scripts/decoding_ablation.py`).
+- `cost_needle.md`: compute per Needle episode by role, prefix-reuse FLOPs with measured cache hits
+  (`src/ctxmgr/accounting/flops.py`), no-cache bound and GPU-seconds (`scripts/cost_table.py`; runs
+  from rounds 25-28 only, the first to log `cached_prompt_tokens`).
 - Archive conditions (round 24, jobs 30937295 and 30939991/4/7): `none_r`, `self_arc`, `peer_same_arc`,
   `peer_27b_arc` (`edit_version` `edit-v8-arc`) and `mask_arc` (`rule-mask-v1`). Their per-episode
   RECALL logs are in each run's `recalls.jsonl` (not in this table).
