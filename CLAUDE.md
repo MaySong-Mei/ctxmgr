@@ -665,6 +665,15 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - `scripts/cost_law.py` -> `docs/tables/cost_law_needle.md`: peer-manager reads vs T / (T - R),
     median measured/predicted 0.94 (IQR 0.74-0.98, 55 cells); 27B manager 0.94-0.98, reads each
     streamed token 1.04-1.20 times. Finding 8 bullet.
+- Round 29 (submitted 2026-10-30 17:07, after `docs/preregistration-v2.md` was pushed in 3b7c719):
+  harness `may/track2-baseline` 0eec53e; Needle K4-C24 + K8-C48, seeds 42-49; settings as
+  `slurm/prereg_submit.sh` (`MAX_NUM_SEQS=64 MAX_TURNS_PER_OP=2`, trigger 18,432, max_len 81,920,
+  `PROMPT_TOKENS_DETAILS=1`, `gpu_h200`).
+  - 31451066 `r29-27b-rule`: `baseline_smoke.sbatch`, Qwen3.5-27B, `none rule_needle`, greedy,
+    util 0.90 (P11, P12).
+  - 31451067 `r29-9b-sampled`: `peer27b_pilot.sbatch`, 2B actor + 9B manager (0.55/0.38),
+    `none peer_9b`, `SAMPLING='--temperature 0.7 --top-p 0.8 --top-k 20 --presence-penalty 1.5'`
+    (P13, P14).
 
 ## Dev
 
