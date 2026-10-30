@@ -648,6 +648,23 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   FLOPs (27B v8: 17x for 2B, 6.4x for 4B, 3.7x for 9B). K4-C24: 2B + 27B 0.99 at 7.5 PF / 90 GPU-s vs
   27B peer_same 0.77 at 28.5 PF / 1,312 s vs rule 1.00 at 0.56 PF / 10 s. Thinking: 1.3-1.5x FLOPs,
   4-5x GPU time. `results.md` finding 8.
+- Next-task review (2026-10-30): two rounds of hostile reviews (task validity with offline MuSiQue /
+  HotpotQA retention simulations, research strategy, revised-plan methods and claims). HotpotQA is
+  rule-solvable (best cheap rule keeps all gold for 0.93-1.00 of questions); MuSiQue leaves headroom
+  only at K >= 4 questions per episode; a live MuSiQue port does not fit the harness in a week.
+  Plan: write-up first; 27B + rule and 9B-manager-sampled must-runs; second manager family (Gemma 4)
+  with an identical-input replay probe; optional offline MuSiQue selector probe.
+- Week-1 analysis (2026-10-30), no GPU:
+  - `scripts/mechanism_table.py` -> `docs/tables/mechanism_needle.md`: the share of applied manager
+    events that note or replace vs gain over `none`, Spearman 0.67 (65 cells, K4-C24) / 0.62
+    (54, K8-C48). Figure `docs/figures/needle_protective_vs_gain.png` (`scripts/plot_mechanism.py`).
+    The 4B self-manager and 0.8B `peer_same` never delete (wall). `results.md` finding 9.
+  - `scripts/paired_table.py` -> `docs/tables/paired_needle.md`: paired diff vs `none` per cell with
+    seed-level bootstrap CIs. Greedy `none` differs between jobs for 2 of 196 seed groups (9B K4-C24
+    s43/s46, 0.29 vs 0.33).
+  - `scripts/cost_law.py` -> `docs/tables/cost_law_needle.md`: peer-manager reads vs T / (T - R),
+    median measured/predicted 0.94 (IQR 0.74-0.98, 55 cells); 27B manager 0.94-0.98, reads each
+    streamed token 1.04-1.20 times. Finding 8 bullet.
 
 ## Dev
 

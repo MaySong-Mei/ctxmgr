@@ -219,6 +219,29 @@ points are in "Limits" at the end.
    - `none` is cheap because it stops at the budget wall after about 7 of 24 (K4-C24) or 48 (K8-C48)
      operations. FLOPs omit norms, softmax and the DeltaNet state update; GPU-seconds are batch-1
      calls on a shared H200 and do not transfer to other deployments.
+   - How much a peer manager reads follows a trigger law: it re-reads the context (about T tokens)
+     at each event and each event frees about T − R, so over S streamed tokens it reads about
+     S·T/(T − R). Measured against predicted, the median ratio is 0.94 (IQR 0.74–0.98, 55 cells;
+     `docs/tables/cost_law_needle.md`). For the 27B manager it is 0.94–0.98, and because it leaves
+     little behind (R ≪ T) it reads each streamed token only 1.04–1.20 times. So a small actor with a
+     27B manager costs about as much as the 27B reading the stream itself, plus the small actor. The law
+     overpredicts for managers that free almost nothing (small `peer_same`, `peer_4b`, 9B thinking),
+     whose episodes end at the budget wall instead.
+
+9. **Across every managed cell, the gain over `none` tracks how often the manager protects needles
+   when it edits.** For each Needle cell (condition × manager × prompt wording × decoding, n ≥ 4),
+   the share of applied manager events that `note` or `replace` (the two ways to keep needles while
+   removing their block) correlates with reward − `none`: Spearman 0.67 over 65 cells at K4-C24 and
+   0.62 over 54 at K8-C48 (`docs/tables/mechanism_needle.md`,
+   `docs/figures/needle_protective_vs_gain.png`). The 27B cells lie close to one line, from
+   `example` (0.25 protective, +0.04) to `para3` (1.00, +0.67); 9B and smaller managers sit at 0–0.04
+   protective. Protecting is necessary, not sufficient: the 4B self-manager and the 0.8B `peer_same`
+   add notes but never delete (0 delete events), so every episode ends at the budget wall and they
+   gain nothing. Manager thinking is the main exception (27B thinking: 0.40 protective, +0.60 at
+   K4-C24; it deletes in all 35 applied events). The per-event measure cannot see whether a deleted
+   block's needles were noted in an earlier event, so it may understate protection there.
+   Paired differences with seed-level bootstrap CIs for every cell are in
+   `docs/tables/paired_needle.md`.
 
 ## Limits
 

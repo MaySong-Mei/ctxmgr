@@ -28,6 +28,15 @@ Other tables:
 - `cost_needle.md`: compute per Needle episode by role, prefix-reuse FLOPs with measured cache hits
   (`src/ctxmgr/accounting/flops.py`), no-cache bound and GPU-seconds (`scripts/cost_table.py`; runs
   from rounds 25-28 only, the first to log `cached_prompt_tokens`).
+- `cost_law_needle.md`: peer-manager prompt tokens / actor uncached tokens against the trigger law
+  T / (T − R) per cell (`scripts/cost_law.py`; same runs as `cost_needle.md`).
+- `mechanism_needle.md`: per managed Needle cell, the share of applied manager events that `note`
+  or `replace` (protective), that delete without either, and that apply nothing, with the gain over
+  `none` (`scripts/mechanism_table.py`; figure `docs/figures/needle_protective_vs_gain.png` by
+  `scripts/plot_mechanism.py`).
+- `paired_needle.md`: per managed Needle cell, the difference vs `none` paired by seed, with a
+  seed-level bootstrap 95% CI and a sign test (`scripts/paired_table.py`). Versions are kept apart,
+  so the pooled grid's 27B-manager cells (edit-v7 for s42-45, edit-v8 for s46-49) appear as two rows.
 - Archive conditions (round 24, jobs 30937295 and 30939991/4/7): `none_r`, `self_arc`, `peer_same_arc`,
   `peer_27b_arc` (`edit_version` `edit-v8-arc`) and `mask_arc` (`rule-mask-v1`). Their per-episode
   RECALL logs are in each run's `recalls.jsonl` (not in this table).
