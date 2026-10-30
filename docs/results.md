@@ -180,7 +180,8 @@ points are in "Limits" at the end.
    `config.json`; the 27B gives CLM's 48.70 GFLOP/token and 3.93×10⁵ per query-key pair) with the
    prefix-cache hits vLLM measured, and GPU-seconds (summed call latency; actor and manager share one
    H200, one call at a time). Means per episode from `docs/tables/cost_needle.md`, which covers only
-   runs that logged cache hits (rounds 25–28):
+   runs that logged cache hits (rounds 25–28); figure `docs/figures/needle_reward_vs_compute.png`
+   (`scripts/plot_cost.py`):
 
    | level | system | reward | PFLOPs | manager share | GPU-s |
    |---|---|---|---|---|---|
