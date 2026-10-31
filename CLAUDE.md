@@ -740,6 +740,14 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     `none` (0.33 / 0.15). Technically usable as a manager; on these seeds it hurts, like the Qwen 9B.
   - Actor loops under Gemma managers (both sizes) are a new outcome to report per cell (termination
     audit), not a reason to exclude episodes.
+- Round 31 (submitted 2026-10-31, after `docs/preregistration-v4.md` was frozen in 173313b): Gemma 4
+  manager ladder, harness `may/gemma4-managers` e04f356, `peer27b_pilot.sbatch`, 2B actor, Needle
+  K4-C24 + K8-C48, seeds 42-49, greedy, settings of rounds 25-29, `gpu_h200`. 12B at 0.55/0.38
+  (4 h limit), 31B at 0.60/0.33 (6 h). `none` rerun in the v8 jobs. G1-G5.
+  - 31545118 `r31-g12-v8`, 31545119 `r31-g31-v8`, 31545120 `r31-g12-para3`,
+    31545121 `r31-g31-para3`, 31545122 `r31-g12-para4`, 31545123 `r31-g31-para4`.
+  - A first submit attempt failed before reaching `sbatch`: the script had CRLF line endings after
+    a Windows rewrite. Nothing was queued.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
