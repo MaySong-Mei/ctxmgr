@@ -1,0 +1,30 @@
+{
+  "release": "native-clm-vllm-bf16-2",
+  "prepared_at_utc": "2026-10-31T02:18:39Z",
+  "source_archive_sha256": "0cafca6037461e40cf6c24e15b0a2c6613fdfe7b1d21fc1fc7f9916edfc8eeb3",
+  "planned_episodes": 240,
+  "models": [
+    "0.8B",
+    "2B",
+    "4B",
+    "9B",
+    "27B"
+  ],
+  "local_validation": {
+    "tests_collected": 73,
+    "passed": 70,
+    "errors_missing_dependencies": 2,
+    "skipped": 1
+  },
+  "gpu_inference_tested": false,
+  "preserved_source_sha256": {
+    "src/ctxmgr/tasks/__init__.py": "edd149c8e90b3182261fbe604ed7d040836c95e41ff45f78616cec5a45dd1ac7",
+    "src/ctxmgr/tasks/core.py": "e6b89b6a85b35f75c7530873422d2a0291ed82dc11a97757f25c0fd93f14e498",
+    "src/ctxmgr/tasks/scoring.py": "6b566d533e9e9ca4a8cc0e7a6f874a9c450a897df4fe8e3e213f4c2fbb23deef",
+    "src/ctxmgr/harness/agents.py": "ea0aa27318cb529ceae75b3497ccce3c27bcbf619c6e36c15fe8b56a2147eb3b",
+    "src/ctxmgr/harness/episode.py": "0f927c459cd135b7d3649cfe46d9ff166699a2f2b13dfccf8e60b519fca7ab78",
+    "src/ctxmgr/harness/management.py": "0aac62e1bc8257999a43c0414aaae501d001f188b1266b5b32852d1a891cc7ba",
+    "uv.lock": "411ec6358e6ddd46724dd89ffa2702c751761e1c3a21e536cf534a8936a727a3",
+    "envs/clm/uv.lock": "c4244286ac7f6e1910b14b16f449694a01da993d3bfe31552fcb8c1f75988172"
+  }
+}

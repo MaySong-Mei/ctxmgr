@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.sif
+*.gguf
+*.safetensors
+*.bin
+.env
+.env.*
+runs/
+logs/
+hf_cache/

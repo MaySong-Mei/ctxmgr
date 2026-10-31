@@ -1,0 +1,53 @@
+{
+  "clm_commit": "483198229ab7b90c0eed4651306ab3b3505aaf50",
+  "contextbench_commit": "fb533c18c78a82d3f1b2047a9c1700735cf829ae",
+  "packages": {
+    "clm_harness": {
+      "__init__.py": "9e1147a29f9d20b0481af41b20caf47517d4fd37283fceccc967b3fb148c2bd3",
+      "agent_trajectory_format/__init__.py": "030376957df7c86671a7fc754f3f7cb6cea4dee1d1469c11fb36fa5480df9612",
+      "agent_trajectory_format/builder.py": "b3c28cedf18b99f71a21d0076f0d7043a8b0c807a2ba5eb8e4e32f9e670526d7",
+      "agent_trajectory_format/harness_export.py": "758d38b8020bcb673c6f4aae911d01c00d390c7891067bbefc004f7306affcbf",
+      "agent_trajectory_format/models.py": "f291e7f1100c80ab4b44748fa00b27450fc252da155e4114e4de36f0848b6945",
+      "agent_trajectory_format/validator.py": "145fd3b7b5418f2f9e8a17e6fa302df47efce6814ec46aac8eca728fa9f77496",
+      "cli.py": "4693bc54486172bd9c44fd021a2bcc19271ba5852346c78809ad4afd4038c9d3",
+      "clm_agent/__init__.py": "ab0456ff45f9c3c044744a07a1ac455f85c4d5f15dc3850942c320fc743da4a5",
+      "clm_agent/harness.py": "5f1a5defc2516733d6564a6f6f048f06de807508ca694255423cff0fbc8803ca",
+      "clm_agent/prompts.yaml": "a2641317c77e07878cb84a12489ac71f1393db4901026923539c4f605772bddf",
+      "configs/bcp.yaml": "ef906577b605691114f1afc6f9bf8e3e0a7f3efd0d5a1aef8a72a3f71c228bcc",
+      "configs/edgebench.yaml": "3ad1afbeac95fec67ea660b9f4be3b172f962f33699f8d24b2113739997c7887",
+      "context_env/__init__.py": "313e1d10fa683aec32204a2c8d0b1fe5e94a9781b031274ba6f49ee2744fd24d",
+      "context_env/edit_gate.py": "1cfdb5c83f19dba7ddeede90618d155963faa554dc65e47997d19d2a19581f6c",
+      "context_env/env.py": "414f8f05b93d141374307d797e7cd3ad1c4315810450706e552c312ac9dd6e48",
+      "context_env/paths.py": "9b5a0858269aea18372b1aafae455987b609a2754b12cf75d890f5111bcbd698",
+      "context_env/types.py": "0b23407a48df843b542457a2996f773bbbd93add7feca7a8ffeb59ee46d5e63b",
+      "context_utils/__init__.py": "c50b523dbe310670146b47c6a23364b5e0f8864285ee53f70b86c6d41bbc5203",
+      "context_utils/context_string.py": "9a6e96b540fe2ecb339f17397e487d38bdc6ca24962e1f9ef7de8b4c4959e76c",
+      "flops_metrics/__init__.py": "045b41d3a4c8468808599d1e225276c140bf84bae27a1e9de2d4f7cea02d3185",
+      "flops_metrics/kv_cache_flops.py": "e4a7111976e1fecd74370224bc936b7e9d61a2a5bdeeb3ae6ccdd7a6baeceb27",
+      "task_templates/__init__.py": "ea8cc075613cdf52a7b604d632f81f292e5f61cd05b573c294dc9ec0583f9782",
+      "task_templates/edgebench.yaml": "46909b1fdf0934f62e77613f675991901067242dba577c0c5a30bf57f9487e97",
+      "task_templates/open_problems.yaml": "7d22c0e7395324cb94fc80019ba09f04e9a9691458546ea18f66014f2281d83a",
+      "task_templates/terminal_agent_tasks.yaml": "4c055e5161be223453bed475e925fa6d0c3f20e970eb928746a42e2406029feb",
+      "utils/__init__.py": "e68eda9dcb1666107d955f5c5a1048dd862803926abbef3af3d97834425300bc",
+      "utils/budget.py": "7c63b52676209f55bf327c401c6a1762bb0861408fe96cb5da1534554508dee3",
+      "utils/finish_policy.py": "855ab99579e5ab9d7f7204f751c4918e372893d7c8b64a4abc728a83e4d69c2f",
+      "utils/lm_compat.py": "0de191e66e0584ae3012d3108ff02c2432b1a8fa1ddbd7c9d1958f46238a9dde",
+      "utils/pricing.py": "33994e6322f8bff223da348051a81edf75b46f49dbee24c8fcbc00cb4f30cae2",
+      "utils/provenance.py": "e652a2b54c6852b9b6f01edddc5ae53ae75c65f3a2b0aef6dbf0bd08c078bb28",
+      "utils/resume.py": "bffb672509818ec3e2f2f02897ffe86cbe6fc84accffbb3e22b77bd0ab5e7368",
+      "utils/skills.py": "e49b9bd7e8ef587c218aeacc0a36da7d3765f77e9ae7971a98913c7cdaa2ef2c",
+      "utils/tokens.py": "d2c8cfaf0fb0f1ae430e72e774546e469b9cd5f06a4eba119a01d7a0ea972e72",
+      "utils/tool_schemas.py": "088b53de1ba3a2466e723f4bf0799d882405af477e6f97bfa92d21db8e4c0dc0"
+    },
+    "clm_contextbench": {
+      "__init__.py": "8ed1516a934d00f349197739cb780db235d541619f5e6a69dc8e04e91f8a3a99",
+      "clm_stream.py": "026571e55b1d31f40fda92a0fddb5c5bee0260939c779d415a664b9af19da375"
+    }
+  },
+  "assets": {
+    "LICENSE.contextbench": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "contextbench.def": "6cf62e44db44163f92ddb8094793a6dabf2bd989b450bfc23c4bedc776252c61",
+    "skills/clm/kv_store.md": "70695bdca1a7f39df62e2629e7484c031b449f99651593a8442888b819c4e8c3",
+    "skills/clm/needle_retention.md": "e834d24bf004c7aefd38f5d7dc6cffe01a9516b30aa5660a4d245b00ebc8d714"
+  }
+}
