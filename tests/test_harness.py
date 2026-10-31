@@ -163,6 +163,11 @@ def test_peer_size_condition_must_match_the_manager_model():
     assert not manager_size_matches("peer_9b", "Qwen/Qwen3.5-27B")
     assert not manager_size_matches("peer_4b", "Qwen/Qwen3.5-0.8B")
     assert manager_size_matches("peer_same", "Qwen/Qwen3.5-2B")
+    assert {"peer_12b", "peer_31b"} <= CONDITIONS.keys()
+    assert manager_size_matches("peer_31b", "google/gemma-4-31B-it")
+    assert manager_size_matches("peer_12b", "google/gemma-4-12B-it")
+    assert not manager_size_matches("peer_12b", "google/gemma-4-31B-it")
+    assert not manager_size_matches("peer_31b", "google/gemma-4-31B-it-assistant")
 
 
 def test_rule_needle_keeps_every_needle_and_scores_full_with_a_minimal_actor(tmp_path):
