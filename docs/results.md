@@ -8,9 +8,10 @@ and `peer_<size>` (a fixed manager of another size; mainly `peer_27b`). Managers
 (zero-shot). Each cell has 8 seeds (42–49) unless noted; differences are paired on the same instance.
 Greedy decoding with thinking off unless noted.
 
-Sources: `docs/tables/episodes_vllm.csv` (2,872 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (2,904 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/tables/cost_needle.md` (compute
-per episode), `docs/figures/`. Run log: `CLAUDE.md`.
+per episode), `docs/tables/termination_needle.md` (how episodes end; reward = delivered × kept),
+`docs/figures/`. Run log: `CLAUDE.md`.
 Two adversarial reviews (novelty and robustness, 2026-10-28) shaped the wording below; their main
 points are in "Limits" at the end.
 
@@ -73,6 +74,12 @@ points are in "Limits" at the end.
    Not a pure role effect: `self` sees its own system prompt and 80-character block previews, while
    `peer_same` sees a manager system prompt and every block in full. Under the model card's sampling
    (greedy is not a recommended setting for Qwen3.5) the gap mostly disappears.
+   Splitting reward into the share of the stream delivered and the share of delivered needles kept
+   (`docs/tables/termination_needle.md`): at K4-C24 greedy both arms receive almost the whole stream
+   (`peer_same` 0.97, `self` 0.99 of 24 ops), so the +0.48 gap is retention (kept 0.80 vs 0.39). At
+   K8-C48 `peer_same` receives only 0.45–0.65 of the stream (4 of 8 greedy episodes end at the turn
+   cap) and under sampling 11 of 16 episodes in each arm do, so there the gap mixes retention with the
+   output-cap loop described under Limits.
 
 5. **With archive-with-recall, deletion stops hurting KV, and a rule manager suffices.** Removed blocks
    are archived; the actor writes `RECALL <key>` and the harness appends the archived lines with that
@@ -216,6 +223,8 @@ points are in "Limits" at the end.
      manager with thinking uses 1.3× the FLOPs and 4× the GPU time of v8 for no gain; at K8-C48 it
      adds +0.10 over the best wording without thinking (`para2`) for 1.5× the FLOPs and 5× the GPU
      time.
+   - The 27B `self` and `peer_same` rows include actor turns spent in output-cap loops (Limits), so
+     their cost is partly the loop, not management.
    - `none` is cheap because it stops at the budget wall after about 7 of 24 (K4-C24) or 48 (K8-C48)
      operations. FLOPs omit norms, softmax and the DeltaNet state update; GPU-seconds are batch-1
      calls on a shared H200 and do not transfer to other deployments.
@@ -260,5 +269,15 @@ points are in "Limits" at the end.
   constant (0.333 on Needle K4-C24), so paired tests are close to one-sample tests. Greedy outputs vary
   with server state (deviation D1), so repeated instances are near-repeats.
 - **Scope.** Two synthetic tasks, one model family, one trigger (18,432), untrained managers.
-- Under sampling, most managed 27B episodes at K8-C48 end at the turn cap; doubling it changed means by
-  +0.02, so the cap is not driving those results.
+- **Turn cap and output cap (27B actor).** In every reply the 27B actor restates all needles received
+  so far (smaller actors restate only the current op's, so their replies stay at ~170 tokens at K4
+  and ~320 at K8). Once management keeps the context under the wall, the reply grows until it is cut
+  at the 2,048-token output cap, before `READY_FOR_NEXT_OP`; the stream does not advance, the runner's
+  reminder yields the same cut reply, and the episode loops until the turn cap. 38 of 120 managed
+  27B-actor Needle episodes end at `max_steps`, 22 of them with their last 5 replies all cut at the
+  cap; for smaller actors it is 0–6 episodes per size (the 4B actor under thinking managers has 5 cap
+  loops). Doubling the turn cap changed means by +0.02, which is what an absorbing loop predicts; an
+  earlier version of this line read that as "the cap is not driving those results", which was wrong.
+  27B-actor rewards are lower bounds wherever delivered < 1 (`docs/tables/termination_needle.md`).
+  Under `none` the restating costs the 27B one op before the wall (0.29 vs 0.32–0.33 for 0.8B–9B at
+  K4-C24).

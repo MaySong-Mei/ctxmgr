@@ -6,8 +6,8 @@ protective = applied events with a `note` or `replace`; unprotected = applied ev
 delete with neither; shares of applied events. empty = events with nothing applied, share of
 all events. gain = reward - `none` (same level, actor, decoding).
 
-- K4-C24: Spearman(protective share, gain) = 0.67 over 65 cells with n >= 4 and at least one applied event.
-- K8-C48: Spearman(protective share, gain) = 0.62 over 54 cells with n >= 4 and at least one applied event.
+- K4-C24: Spearman(protective share, gain) = 0.67 over 66 cells with n >= 4 and at least one applied event.
+- K8-C48: Spearman(protective share, gain) = 0.62 over 55 cells with n >= 4 and at least one applied event.
 
 | level | actor | condition | manager | version | decoding | n | reward | gain | protective | unprotected | empty | events |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -45,6 +45,7 @@ all events. gain = reward - `none` (same level, actor, decoding).
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v7 | greedy | 8 | 0.97 | +0.64 | 0.97 | 0.03 | 0.00 | 32 |
 | K4-C24 | Qwen3.5-2B | peer_4b | Qwen3.5-4B | edit-v8 | greedy | 8 | 0.34 | +0.01 | 0.00 | 1.00 | 0.09 | 87 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | greedy | 8 | 0.16 | -0.18 | 0.00 | 1.00 | 0.40 | 48 |
+| K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | sampled | 8 | 0.14 | -0.19 | 0.03 | 0.97 | 0.08 | 39 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8+example | greedy | 8 | 0.36 | +0.03 | 0.27 | 0.73 | 0.13 | 38 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8+mustnote | greedy | 8 | 0.14 | -0.20 | 0.02 | 0.98 | 0.09 | 46 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8+para1 | greedy | 8 | 0.33 | +0.00 | - | - | 1.00 | 24 |
@@ -109,6 +110,7 @@ all events. gain = reward - `none` (same level, actor, decoding).
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v7 | greedy | 8 | 0.32 | +0.17 | 0.25 | 0.75 | 0.04 | 91 |
 | K8-C48 | Qwen3.5-2B | peer_4b | Qwen3.5-4B | edit-v8 | greedy | 8 | 0.17 | +0.03 | 0.00 | 1.00 | 0.27 | 49 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | greedy | 8 | 0.06 | -0.09 | 0.00 | 1.00 | 0.08 | 79 |
+| K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | sampled | 8 | 0.09 | -0.06 | 0.14 | 0.86 | 0.02 | 95 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8+example | greedy | 8 | 0.22 | +0.07 | 0.24 | 0.76 | 0.37 | 60 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8+mustnote | greedy | 8 | 0.10 | -0.05 | 0.04 | 0.96 | 0.04 | 80 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8+para1 | greedy | 8 | 0.13 | -0.02 | 0.00 | 1.00 | 0.56 | 41 |

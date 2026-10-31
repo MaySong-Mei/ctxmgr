@@ -37,6 +37,10 @@ Other tables:
 - `paired_needle.md`: per managed Needle cell, the difference vs `none` paired by seed, with a
   seed-level bootstrap 95% CI and a sign test (`scripts/paired_table.py`). Versions are kept apart,
   so the pooled grid's 27B-manager cells (edit-v7 for s42-45, edit-v8 for s46-49) appear as two rows.
+- `termination_needle.md`: per Needle cell (`none` and `rule_needle` included), how episodes end
+  (done / budget wall / turn cap), the share of actor replies cut at the 2,048-token output cap, cap
+  loops (turn-cap endings whose last 5 actor replies are all cut), and reward split into the share of
+  the stream delivered × the share of delivered needles kept (`scripts/termination_audit.py`).
 - Archive conditions (round 24, jobs 30937295 and 30939991/4/7): `none_r`, `self_arc`, `peer_same_arc`,
   `peer_27b_arc` (`edit_version` `edit-v8-arc`) and `mask_arc` (`rule-mask-v1`). Their per-episode
   RECALL logs are in each run's `recalls.jsonl` (not in this table).

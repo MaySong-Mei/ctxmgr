@@ -674,6 +674,24 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - 31451067 `r29-9b-sampled`: `peer27b_pilot.sbatch`, 2B actor + 9B manager (0.55/0.38),
     `none peer_9b`, `SAMPLING='--temperature 0.7 --top-p 0.8 --top-k 20 --presence-penalty 1.5'`
     (P13, P14).
+  - 31451067 done (20 min). `peer_9b` − `none`, sampled, paired: K4-C24 −0.19 [−0.22, −0.17] (0/8,
+    p=0.008), K8-C48 −0.06 [−0.09, −0.03] (1/7, p=0.07) → **P13 confirmed**. Protective share 0.03 /
+    0.14 → **P14 inconclusive** (K8-C48 between 0.10 and 0.25). Exploratory: 9B replies cut at the
+    output cap 0.38 / 0.08 greedy → 0 / 0 sampled; the extra applied edits are unprotected deletes.
+  - 31451066 (27B + rule) partial at 4.2 h: K8-C48 1.00 on 5/5 seeds; K4-C24 0.58 on 5/6 seeds (1.00
+    on s45), so P11 is falsified as registered (max attainable K4 mean 0.74). Cause, post hoc: the 27B
+    restates every needle received in each reply (+~148 tokens/op at K4); at op 14 the reply is cut at
+    the 2,048-token output cap before `READY_FOR_NEXT_OP`, the runner's reminder yields the same cut
+    reply, and the episode loops to `max_steps` (14/24 ops delivered = 56/96 needles). The rule lost
+    nothing. K8 s42 escaped after one cut reply by switching to id ranges; K4 s45 after 9.
+- Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
+  `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
+  managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
+  reply. Smaller actors: 0–6 `max_steps` per size (4B under thinking managers: 5 cap loops). The 2B
+  restates only the current op's needles (flat ~170 / ~320 tokens per reply). The finding-4 gap at
+  K4-C24 greedy is retention (both arms deliver ≥ 0.97 of the stream); at K8-C48 it mixes in the
+  loop. Corrected the results.md Limits line that read the +0.02 from doubling the turn cap as "the
+  cap is not driving those results"; scoped the outline's one-sentence claim to small actors.
 
 ## Dev
 
