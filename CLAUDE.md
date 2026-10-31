@@ -729,6 +729,17 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     unparseable). No empty thought block in any reply. New: the 2B actor degenerated under the 31B's
     aggressive compaction (context down to ~2-6K): 19 of 67 actor replies cut at 2,048, repeating a
     fake needle line ("[n00023i00#12345678] meadow saffron saffron ...") in two stretches of 9-10 turns.
+  - Harness e04f356 (PR #18): `parse_edits` reads `{"edits": {<one edit>}}` as a one-edit list, marked
+    `_wrapped`. CPU job 31543128: 72 tests pass. Same day, chained on it:
+  - 31543130 `q27-canary` (2B + Qwen 27B manager, v8, K4-C24, s46/s47): 1.00 / 1.00, as in job
+    30127435 (1.00 / 1.00). The harness changes leave the Qwen path unchanged on these seeds.
+  - 31543129 `g12-smoke2` (12B rerun, s42): parse failures now 3 of 17 events (18%, under the 20%
+    criterion); 1 of 17 replies cut at 4,096. K4-C24 0.21 (`max_steps`; the 12B deletes nearly
+    everything without notes, context 21K → 1K, and the 2B actor then loops: 34 of 58 replies cut at
+    2,048); K8-C48 0.15 (budget wall; replaces that do not shrink, 2 invalid JSON). Both at or below
+    `none` (0.33 / 0.15). Technically usable as a manager; on these seeds it hurts, like the Qwen 9B.
+  - Actor loops under Gemma managers (both sizes) are a new outcome to report per cell (termination
+    audit), not a reason to exclude episodes.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
