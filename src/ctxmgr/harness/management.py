@@ -273,6 +273,10 @@ def parse_edits(reply: str) -> tuple[list[dict], str | None]:
         # v8: a bare edit object is read as a one-edit list (27B in `self` wrote these in 26 of 31
         # v7 events; 0 of 104 as `peer_same`). Marked so the format slip stays countable.
         return [{**parsed, "_wrapped": True}], None
+    if isinstance(edits, dict) and ("op" in edits or _infer_op(edits)):
+        # The same slip one level down: `{"edits": {<one edit>}}` (Gemma 4 12B in 3 of 6 smoke
+        # events; no Qwen3.5 event before it). Read as a one-edit list and marked the same way.
+        return [{**edits, "_wrapped": True}], None
     if not isinstance(edits, list):
         return [], "missing 'edits' list"
     return edits, None

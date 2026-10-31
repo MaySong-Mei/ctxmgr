@@ -27,6 +27,9 @@ CONDITIONS = {
     # Manager-size ladder: a fixed external manager of another size (served as MANAGER).
     "peer_4b": PeerManagedAgent,
     "peer_9b": PeerManagedAgent,
+    # Second manager family (Gemma 4 12B / 31B); no Qwen3.5 model has these sizes.
+    "peer_12b": PeerManagedAgent,
+    "peer_31b": PeerManagedAgent,
     # Archive-with-recall arms: removed blocks go to an archive the actor can RECALL from.
     # `none_r` is `none` with the archive instructions (a prompt control; nothing is ever archived).
     "none_r": NoManagementAgent,
@@ -42,9 +45,11 @@ UNMANAGED = {"none", "none_r"}
 
 
 def manager_size_matches(condition: str, manager_model: str | None) -> bool:
-    """`peer_9b` must be served by a `...-9B` model (so a run is never labelled with the wrong size)."""
+    """`peer_9b` must be served by a `...-9B` model (so a run is never labelled with the wrong size).
+    An instruction-tuned suffix is allowed: `peer_31b` matches `google/gemma-4-31B-it`."""
     size = re.match(r"peer_(\d+(?:\.\d+)?b)(?:_|$)", condition)
-    return size is None or (manager_model or "").lower().endswith(f"-{size.group(1)}")
+    name = (manager_model or "").lower().removesuffix("-it")
+    return size is None or name.endswith(f"-{size.group(1)}")
 
 
 def main():
