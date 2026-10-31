@@ -399,6 +399,18 @@ def test_v8_bare_edit_object_is_read_as_one_edit_and_marked():
     assert management.parse_edits('{"foo": 1}')[1] == "missing 'edits' list"
 
 
+def test_single_edit_object_under_edits_is_read_as_one_edit_and_marked():
+    # Gemma 4 12B wrote `{"edits": {...}}` (an object, not a list) in 3 of 6 smoke events.
+    edits, error = management.parse_edits('```json\n{"edits": {"op": "delete", "ids": [3]}}\n```')
+    assert error is None and len(edits) == 1
+    messages = blocks(2)
+    result = management.apply_edits(messages, edits)
+    assert contents(messages) == ["0", "1", "2"]
+    assert result.applied == [{"op": "delete", "ids": [3], "wrapped_bare_edit": True}]
+    # An object without an op or inferable fields is still an error.
+    assert management.parse_edits('{"edits": {"foo": 1}}')[1] == "missing 'edits' list"
+
+
 def test_edit_variants_insert_before_the_reply_line_and_default_is_unchanged():
     assert (
         management.with_variant(management.EDIT_INSTRUCTIONS, None) == management.EDIT_INSTRUCTIONS
