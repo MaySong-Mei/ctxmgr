@@ -2,8 +2,8 @@
 
 Usage: python scripts/cost_table.py OUT.md
 Reads runs/*/<actor>/<condition>/needle_retention-*/ (episode.json, score.json, calls.jsonl) for
-greedy bf16 runs at trigger 18,432 and max_len 81,920 whose calls all logged
-`cached_prompt_tokens` (vLLM prompt_tokens_details; rounds 25-28). FLOPs: `ctxmgr.accounting.flops`
+greedy bf16 Qwen3.5 runs at trigger 18,432 and max_len 81,920 whose calls all logged
+`cached_prompt_tokens` (vLLM prompt_tokens_details; rounds 25-29). FLOPs: `ctxmgr.accounting.flops`
 with the measured cache hits; the no-cache bound sets them to 0. GPU-seconds: summed call latency
 (episodes run one after another in a job, actor and manager share one H200).
 """
@@ -28,6 +28,9 @@ def episode(d: Path):
         return None
     calls = [json.loads(line) for line in (d / "calls.jsonl").read_text().splitlines() if line]
     if not calls or any(c.get("cached_prompt_tokens") is None for c in calls):
+        return None
+    # FLOPs constants exist for Qwen3.5 only; Gemma's sliding-window layers need their own term.
+    if any(size_of(c["model"]) not in CONSTANTS for c in calls):
         return None
     acc = defaultdict(float)
     for c in calls:
