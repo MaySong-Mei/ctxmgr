@@ -715,8 +715,20 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   `-it`; PR #18 into `may/track2-baseline`, review requested from Hancheng. CPU job 31539917 (5 min):
   71 tests pass; vLLM 0.30.0 lists both Gemma 4 archs; transformers 5.20.1 loads both configs; weights
   in the HF cache (12B 23 GB, 31B 59 GB). The cluster worktree `ctxmgr-baseline` is now on
-  `may/gemma4-managers`. `scripts/cost_table.py` skips non-Qwen episodes (94597a1). GPU smoke test
-  drafted, not submitted.
+  `may/gemma4-managers`. `scripts/cost_table.py` skips non-Qwen episodes (94597a1).
+- Gemma smoke (2026-10-31, harness f47cf39, `peer27b_pilot.sbatch`, 2B actor, Needle K4-C24 + K8-C48,
+  s42, edit-v8, greedy, H200; vLLM ERROR lines in the 12B job's actor log come from the forced kill at
+  shutdown, after both scores were written):
+  - 31540580 `g12-smoke` (12B at 0.55, 7 min): 7.99x concurrency at 81,920. Both episodes hit the wall
+    (0.33 / 0.17); 4 of 6 manager events unparseable: 3 wrote `{"edits": {<one edit>}}` (an object, not
+    a list; all unprotected deletes of even ids) and 1 left the list unclosed. Fails the < 20% parse
+    criterion. No earlier Qwen event has an `edits` object (64 "missing 'edits' list" events, all
+    without `edits`), so accepting it as a one-edit list would change no existing result.
+  - 31540581 `g31-smoke` (31B at 0.60, 19 min): 1.14x concurrency. K4-C24 1.00 (4/4 events note then
+    delete); K8-C48 0.625 (13/14 applied, 7 protective; 2/14 replies cut at the 4,096 cap, one of them
+    unparseable). No empty thought block in any reply. New: the 2B actor degenerated under the 31B's
+    aggressive compaction (context down to ~2-6K): 19 of 67 actor replies cut at 2,048, repeating a
+    fake needle line ("[n00023i00#12345678] meadow saffron saffron ...") in two stretches of 9-10 turns.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
