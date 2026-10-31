@@ -103,7 +103,8 @@ points are in "Limits" at the end.
    (`none_r` 0.00 vs `none` 0.46), so small actors are sensitive to instruction length; 2B is excluded.
 
 6. **Pre-registered validation: v1 had none falsified, most informative tests inconclusive; v2 had
-   two falsified by the 27B actor's output-cap loop.** Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
+   two falsified by the 27B actor's output-cap loop; v3 (a replay probe of that loop) had one
+   falsified.** Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
    and two held-out levels: 7 confirmed, 3 inconclusive, 0 falsified
    (`docs/preregistration-results.md`). Five were structural guards that could hardly fail (P2: `self`
    equals `none`; P3/P6: `none` is 0 at KV R1000 by construction; P7: archived needles cannot count
@@ -123,6 +124,28 @@ points are in "Limits" at the end.
    - **P14 inconclusive:** protective share 0.03 at K4-C24, 0.14 at K8-C48 (between 0.10 and 0.25).
      Exploratory: 9B replies cut at the 4,096-token manager cap fall from 0.38 / 0.08 (greedy) to 0 / 0
      under sampling, and the extra applied edits are unprotected deletes.
+
+   Pre-registration v3 (`docs/preregistration-v3.md`, round 30, job 31513325) replays single 27B
+   actor calls rebuilt from round 29's snapshots (`docs/tables/replay_probe.md`). Four predictions
+   were confirmed and one falsified:
+   - **Q1 confirmed:** exact replays reproduce the logged `finish_reason` in 42/42 calls (41/42
+     identical text), including K8's 6 escapes and 2 loops.
+   - **Q2 confirmed:** with `max_tokens` 8,192 all 16 K4 replies at the loop points end with the
+     marker after 2,085–2,156 tokens. The restated list of 56 needles is just over the 2,048 cap; the
+     reply does not degenerate.
+   - **Q3 confirmed:** with its previous reply and the reminder removed, the 27B rebuilds the full
+     list from the notes block and is cut in 8/8; with a short previous reply, in 7/8. Restating is
+     the actor's policy, not carried by the reply the rule keeps.
+   - **Q4 falsified:** appending "Do not repeat needle lines from earlier operations in your
+     replies." to the instruction leaves cumulative restating in 8/8 four-turn rollouts. Saying that
+     messages persist, or that a manager copies every needle into notes, changes nothing either
+     (8/8 each; replies grow ~150 tokens per op in every arm). So one appended sentence neither stops
+     it nor shows it to come from a belief that messages vanish or from distrust of the manager.
+   - **Q5 confirmed:** under the recommended sampling 5/64 replies escape (6/64 with presence penalty
+     1.5), mostly on seeds 45 and 47, so greedy decoding is not what makes the loop absorbing.
+   - Exploratory: a reminder that names the output cap gets 9/16 replies out. None of the
+     pre-listed fixes removes the loop, so no P11b episode run follows; only more output room does,
+     and that changes the benchmark's 2,048-token reserve.
 
 7. **Manager-size ladder: without thinking only the 27B manager helps, under seven prompt wordings;
    with thinking both 9B and 27B help, and 27B stays ahead.** Needle, greedy, 8 seeds, `none` rerun
@@ -299,4 +322,5 @@ points are in "Limits" at the end.
   earlier version of this line read that as "the cap is not driving those results", which was wrong.
   27B-actor rewards are lower bounds wherever delivered < 1 (`docs/tables/termination_needle.md`).
   Under `none` the restating costs the 27B one op before the wall (0.29 vs 0.32–0.33 for 0.8B–9B at
-  K4-C24).
+  K4-C24). The replay probe (finding 6, v3) shows the cap binds by a small margin, the restating is
+  the 27B's policy, and neither one-sentence instructions or disclosures nor sampling stop it.

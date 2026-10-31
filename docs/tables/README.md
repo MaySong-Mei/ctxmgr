@@ -41,6 +41,9 @@ Other tables:
   (done / budget wall / turn cap), the share of actor replies cut at the 2,048-token output cap, cap
   loops (turn-cap endings whose last 5 actor replies are all cut), and reward split into the share of
   the stream delivered × the share of delivered needles kept (`scripts/termination_audit.py`).
+- `replay_probe.md`: round-30 replay probe (job 31513325) of the 27B actor's output-cap loop, per
+  arm and probe point (`scripts/replay_probe.py summarize` on the harness branch; design in
+  `docs/preregistration-v3.md`).
 - Archive conditions (round 24, jobs 30937295 and 30939991/4/7): `none_r`, `self_arc`, `peer_same_arc`,
   `peer_27b_arc` (`edit_version` `edit-v8-arc`) and `mask_arc` (`rule-mask-v1`). Their per-episode
   RECALL logs are in each run's `recalls.jsonl` (not in this table).

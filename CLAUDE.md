@@ -700,6 +700,13 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   51b6825, `gpu_h200`, one H200, defaults (27B bf16, max_len 81,920, util 0.90, 64 seqs). Replays
   single calls rebuilt from 31451066's snapshots (arms R1-R6, 362 calls); output
   `runs/replay-31513325/replay.jsonl`, summary table at the end of the job log. Q1-Q5.
+  - Done 04:31 (29 min, exit 0, a1122u11n01, no vLLM ERROR); table `docs/tables/replay_probe.md`.
+    Q1 confirmed (42/42 finish_reason, 41/42 identical text); Q2 confirmed (8,192 cap: 16/16 end
+    with the marker at 2,085-2,156 tokens); Q3 confirmed (no previous reply: 8/8 cut, full list
+    rebuilt from notes; short previous reply 7/8 cut); **Q4 falsified** (D3 "do not repeat" 8/8
+    still cumulative; D1, D2 also 8/8); Q5 confirmed (sampled escape 5/64, with presence penalty
+    6/64, mostly s45/s47). R6 cap-naming reminder 9/16 escape. No pre-listed fix removes the loop,
+    so no P11b run; only more output room does (changes the 2,048 reserve).
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
