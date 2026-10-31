@@ -695,6 +695,11 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   - Process slip: earlier on 2026-10-30 a few read-only `python3` one-liners ran on the Bouchet login
     node to read logs, against the "no Python on login nodes" rule. Pull run dirs and analyse
     locally instead.
+- Round 30 (submitted 2026-10-31 03:4x EDT, after `docs/preregistration-v3.md` was frozen in
+  d5342ac): job 31513325 `r30-replay`, `slurm/replay_probe.sbatch` at harness `may/track2-baseline`
+  51b6825, `gpu_h200`, one H200, defaults (27B bf16, max_len 81,920, util 0.90, 64 seqs). Replays
+  single calls rebuilt from 31451066's snapshots (arms R1-R6, 362 calls); output
+  `runs/replay-31513325/replay.jsonl`, summary table at the end of the job log. Q1-Q5.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
