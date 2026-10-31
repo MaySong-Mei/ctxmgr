@@ -759,6 +759,19 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     only 1 of 96 Gemma episodes. Up to 0.52 of a cell's events unparseable (12B v8 K8). GPU-s per
     episode, 31B: 105-320 (K4), 459-806 (K8). `results.md` finding 10; mechanism figure redrawn with
     Gemma in magenta.
+- First-event check (2026-10-31, no GPU): up to the first manager event the 2B actor's trajectory is
+  the same in every condition (31 of 32 level x seed groups have identical context sizes), so first
+  events are identical inputs. Success (all needles kept, >= 30% freed) at the first event: Qwen 27B
+  and Gemma 31B ~8/8 under every wording; Qwen 9B 0-2/8; Gemma 12B v8 4/8 (K4) / 0/8 (K8), `para3`
+  4/8 / 1/8, `para4` 0/8 / 0/8. So the 12B's `para3` episode advantage is not at the first event.
+- Round 32 (submitted 2026-10-31, after `docs/preregistration-v5.md` was frozen in 3758dc2):
+  identical-input manager replay, harness `may/manager-replay` b8252b3 (`scripts/manager_replay.py`,
+  `slurm/manager_replay.sbatch`), inputs = first three events of job 31545119's 16 episodes (48
+  contexts; local rebuild check matched all 48 contexts and v8 requests to the logged o200k sizes),
+  each manager alone on one H200 (util 0.90), 5 wordings greedy, plus 4 sampled repeats for the 12B
+  under v8 / `para3` / `para4`. R1-R3.
+  - 31558632 `r32-mr-g12` (Gemma 12B, + sampled), 31558633 `r32-mr-g31`, 31558634 `r32-mr-q9`,
+    31558635 `r32-mr-q27`. Output `runs/mreplay-<job>/replay.jsonl`.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
