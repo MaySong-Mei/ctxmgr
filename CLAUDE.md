@@ -707,6 +707,16 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     still cumulative; D1, D2 also 8/8); Q5 confirmed (sampled escape 5/64, with presence penalty
     6/64, mostly s45/s47). R6 cap-naming reminder 9/16 escape. No pre-listed fix removes the loop,
     so no P11b run; only more output room does (changes the 2,048 reserve).
+- Week-2 prep (2026-10-31): second manager family = Gemma 4 12B (`google/gemma-4-12B-it`,
+  `Gemma4UnifiedForConditionalGeneration`, 48 layers, 5:1 sliding/full, window 1,024) and 31B
+  (`google/gemma-4-31B-it`, `Gemma4ForConditionalGeneration`, 60 layers, same pattern); Apache 2.0,
+  not gated; chat template has a system role and `enable_thinking` (default off; emits an empty thought
+  block). Harness branch `may/gemma4-managers` (f47cf39): `peer_12b`, `peer_31b`, size check accepts
+  `-it`; PR #18 into `may/track2-baseline`, review requested from Hancheng. CPU job 31539917 (5 min):
+  71 tests pass; vLLM 0.30.0 lists both Gemma 4 archs; transformers 5.20.1 loads both configs; weights
+  in the HF cache (12B 23 GB, 31B 59 GB). The cluster worktree `ctxmgr-baseline` is now on
+  `may/gemma4-managers`. `scripts/cost_table.py` skips non-Qwen episodes (94597a1). GPU smoke test
+  drafted, not submitted.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
