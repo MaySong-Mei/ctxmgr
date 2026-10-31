@@ -8,7 +8,7 @@ and `peer_<size>` (a fixed manager of another size; mainly `peer_27b`). Managers
 (zero-shot). Each cell has 8 seeds (42–49) unless noted; differences are paired on the same instance.
 Greedy decoding with thinking off unless noted.
 
-Sources: `docs/tables/episodes_vllm.csv` (2,904 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (2,936 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/tables/cost_needle.md` (compute
 per episode), `docs/tables/termination_needle.md` (how episodes end; reward = delivered × kept),
 `docs/figures/`. Run log: `CLAUDE.md`.
@@ -26,7 +26,10 @@ points are in "Limits" at the end.
    (`scripts/simulate_rule_needle.py` on `may/track2-baseline`); run live with the 2B actor it also
    scores 1.000 on all 8 seeds at K4-C24 and K8-C48 (job 31255831). So on Needle a manager that helps is
    doing the retention itself; the actor contributes little (0.8B and 2B score alike under the 27B
-   manager). Results 1, 2 and 7 measure how close zero-shot managers get to this rule.
+   manager). The "actor that only advances" is an assumption the 27B actor breaks: with the same rule
+   it scores 0.64 at K4-C24 and 0.79 at K8-C48 (job 31451066), because it restates every needle in
+   each reply until the reply is cut at the output cap and the stream stops (Limits). The rule kept
+   every delivered needle (kept = 1.00); 7 of 8 K4 and 2 of 8 K8 episodes ended in that loop. Results 1, 2 and 7 measure how close zero-shot managers get to this rule.
 
 ## Findings
 
@@ -99,8 +102,8 @@ points are in "Limits" at the end.
    GETs, 4B rarely or never). The 2B actor's ANSWER format breaks when the archive paragraph is added
    (`none_r` 0.00 vs `none` 0.46), so small actors are sensitive to instruction length; 2B is excluded.
 
-6. **Pre-registered validation: no prediction falsified; most informative ones inconclusive.** Ten
-   predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
+6. **Pre-registered validation: v1 had none falsified, most informative tests inconclusive; v2 had
+   two falsified by the 27B actor's output-cap loop.** Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
    and two held-out levels: 7 confirmed, 3 inconclusive, 0 falsified
    (`docs/preregistration-results.md`). Five were structural guards that could hardly fail (P2: `self`
    equals `none`; P3/P6: `none` is 0 at KV R1000 by construction; P7: archived needles cannot count
@@ -108,6 +111,18 @@ points are in "Limits" at the end.
    2 were confirmed (P1: 27B manager gain on new seeds; P10: gain at the held-out K2-C192 level) and 3
    were inconclusive (P4, P5, P9; see the results file). New seeds reuse each level's layout, so only
    P9–P10 test a new layout.
+   Pre-registration v2 (`docs/preregistration-v2.md`, round 29) has two falsified, one confirmed and
+   one inconclusive:
+   - **P11 falsified:** 27B actor + rule 0.64 (K4-C24) and 0.79 (K8-C48), below 0.90 at both levels.
+     The cause is the output-cap loop (finding 0, Limits); this explanation is post hoc.
+   - **P12 falsified:** 14.2 PF per episode at K4-C24 against 8.7 predicted (+63%); 25.5 PF at
+     K8-C48 against 24.1 (+6%). At K4 the number measures the loop: 7 of 8 episodes made 58 actor
+     calls for 14 of 24 ops, 45 of them cut at the cap.
+   - **P13 confirmed:** recommended sampling does not rescue the 9B manager: `peer_9b` − `none`, both
+     sampled, −0.19 [−0.22, −0.17] at K4-C24 (0/8 seeds) and −0.06 [−0.09, −0.03] at K8-C48 (1/7).
+   - **P14 inconclusive:** protective share 0.03 at K4-C24, 0.14 at K8-C48 (between 0.10 and 0.25).
+     Exploratory: 9B replies cut at the 4,096-token manager cap fall from 0.38 / 0.08 (greedy) to 0 / 0
+     under sampling, and the extra applied edits are unprotected deletes.
 
 7. **Manager-size ladder: without thinking only the 27B manager helps, under seven prompt wordings;
    with thinking both 9B and 27B help, and 27B stays ahead.** Needle, greedy, 8 seeds, `none` rerun
@@ -187,7 +202,7 @@ points are in "Limits" at the end.
    `config.json`; the 27B gives CLM's 48.70 GFLOP/token and 3.93×10⁵ per query-key pair) with the
    prefix-cache hits vLLM measured, and GPU-seconds (summed call latency; actor and manager share one
    H200, one call at a time). Means per episode from `docs/tables/cost_needle.md`, which covers only
-   runs that logged cache hits (rounds 25–28); figure `docs/figures/needle_reward_vs_compute.png`
+   runs that logged cache hits (rounds 25–29); figure `docs/figures/needle_reward_vs_compute.png`
    (`scripts/plot_cost.py`):
 
    | level | system | reward | PFLOPs | manager share | GPU-s |
@@ -201,8 +216,11 @@ points are in "Limits" at the end.
    | K4-C24 | 27B `none` | 0.29 | 2.4 | – | 53 |
    | K4-C24 | 27B `self` | 0.40 | 13.0 | 10% | 576 |
    | K4-C24 | 27B `peer_same` | 0.77 | 28.5 | 48% | 1,312 |
+   | K4-C24 | 27B + `rule_needle` | 0.64 | 14.2 | – | 1,461 |
    | K8-C48 | 2B `none` | 0.15 | 0.18 | – | 5 |
    | K8-C48 | 2B + `rule_needle` | 1.00 | 1.6 | – | 35 |
+   | K8-C48 | 27B `none` | 0.15 | 2.8 | – | 101 |
+   | K8-C48 | 27B + `rule_needle` | 0.79 | 25.5 | – | 1,152 |
    | K8-C48 | 2B + 9B manager, thinking | 0.34 | 6.7 | 93% | 423 |
    | K8-C48 | 2B + 27B manager (`para2`) | 0.53 | 18.7 | 96% | 281 |
    | K8-C48 | 2B + 27B manager, thinking | 0.63 | 28.2 | 97% | 1,503 |
@@ -223,8 +241,9 @@ points are in "Limits" at the end.
      manager with thinking uses 1.3× the FLOPs and 4× the GPU time of v8 for no gain; at K8-C48 it
      adds +0.10 over the best wording without thinking (`para2`) for 1.5× the FLOPs and 5× the GPU
      time.
-   - The 27B `self` and `peer_same` rows include actor turns spent in output-cap loops (Limits), so
-     their cost is partly the loop, not management.
+   - The 27B `self`, `peer_same` and `rule_needle` rows include actor turns spent in output-cap
+     loops (Limits), so their cost is partly the loop, not management (27B + rule at K4-C24: 58 actor
+     calls for 14 ops in 7 of 8 episodes).
    - `none` is cheap because it stops at the budget wall after about 7 of 24 (K4-C24) or 48 (K8-C48)
      operations. FLOPs omit norms, softmax and the DeltaNet state update; GPU-seconds are batch-1
      calls on a shared H200 and do not transfer to other deployments.
@@ -273,9 +292,9 @@ points are in "Limits" at the end.
   so far (smaller actors restate only the current op's, so their replies stay at ~170 tokens at K4
   and ~320 at K8). Once management keeps the context under the wall, the reply grows until it is cut
   at the 2,048-token output cap, before `READY_FOR_NEXT_OP`; the stream does not advance, the runner's
-  reminder yields the same cut reply, and the episode loops until the turn cap. 38 of 120 managed
-  27B-actor Needle episodes end at `max_steps`, 22 of them with their last 5 replies all cut at the
-  cap; for smaller actors it is 0–6 episodes per size (the 4B actor under thinking managers has 5 cap
+  reminder yields the same cut reply, and the episode loops until the turn cap. 47 of 136 managed
+  27B-actor Needle episodes end at `max_steps`, 31 of them with their last 5 replies all cut at the
+  cap (9 of the 31 are 27B + rule, round 29); for smaller actors it is 0–6 episodes per size (the 4B actor under thinking managers has 5 cap
   loops). Doubling the turn cap changed means by +0.02, which is what an absorbing loop predicts; an
   earlier version of this line read that as "the cap is not driving those results", which was wrong.
   27B-actor rewards are lower bounds wherever delivered < 1 (`docs/tables/termination_needle.md`).

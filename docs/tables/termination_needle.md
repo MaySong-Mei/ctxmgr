@@ -13,7 +13,7 @@ Managed episodes (every condition except `none`), by actor:
 - Qwen3.5-2B: 1/448 managed episodes end at `max_steps`, 0 of them in a cap loop; 59/448 have at least one capped actor reply.
 - Qwen3.5-4B: 6/216 managed episodes end at `max_steps`, 5 of them in a cap loop; 10/216 have at least one capped actor reply.
 - Qwen3.5-9B: 0/113 managed episodes end at `max_steps`, 0 of them in a cap loop; 1/113 have at least one capped actor reply.
-- Qwen3.5-27B: 38/120 managed episodes end at `max_steps`, 22 of them in a cap loop; 100/120 have at least one capped actor reply.
+- Qwen3.5-27B: 47/136 managed episodes end at `max_steps`, 31 of them in a cap loop; 116/136 have at least one capped actor reply.
 - Qwen3.5-27B-FP8: 0/8 managed episodes end at `max_steps`, 0 of them in a cap loop; 4/8 have at least one capped actor reply.
 
 | level | actor | condition | manager | version | decoding | n | reward | delivered | kept | done | wall | max_steps | other | capped | episodes with a cap | cap loops |
@@ -31,11 +31,12 @@ Managed episodes (every condition except `none`), by actor:
 | K4-C24 | Qwen3.5-0.8B | self | - | edit-v7 | greedy | 4 | 0.33 | 0.33 | 1.00 | 0 | 4 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-0.8B | self | - | edit-v8 | greedy | 8 | 0.33 | 0.33 | 1.00 | 0 | 8 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-0.8B | self | - | edit-v8 | sampled | 8 | 0.22 | 0.22 | 1.00 | 0 | 8 | 0 | 0 | 0.31 | 3 | 0 |
-| K4-C24 | Qwen3.5-27B | none | - | - | greedy | 25 | 0.29 | 0.29 | 1.00 | 0 | 25 | 0 | 0 | 0.00 | 0 | 0 |
+| K4-C24 | Qwen3.5-27B | none | - | - | greedy | 33 | 0.29 | 0.29 | 1.00 | 0 | 33 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-27B | none | - | - | sampled | 8 | 0.29 | 0.29 | 1.00 | 0 | 8 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-27B | peer_same | Qwen3.5-27B | edit-v7 | greedy | 4 | 0.89 | 0.99 | 0.90 | 3 | 0 | 1 | 0 | 0.45 | 4 | 1 |
 | K4-C24 | Qwen3.5-27B | peer_same | Qwen3.5-27B | edit-v8 | greedy | 20 | 0.78 | 0.97 | 0.80 | 14 | 0 | 6 | 0 | 0.52 | 20 | 3 |
 | K4-C24 | Qwen3.5-27B | peer_same | Qwen3.5-27B | edit-v8 | sampled | 8 | 0.67 | 0.97 | 0.70 | 6 | 0 | 2 | 0 | 0.45 | 7 | 2 |
+| K4-C24 | Qwen3.5-27B | rule_needle | - | rule-needle-v1 | greedy | 8 | 0.64 | 0.64 | 1.00 | 1 | 0 | 7 | 0 | 0.74 | 8 | 7 |
 | K4-C24 | Qwen3.5-27B | self | - | edit-v7 | greedy | 4 | 0.29 | 0.29 | 1.00 | 0 | 4 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-27B | self | - | edit-v8 | greedy | 24 | 0.39 | 0.99 | 0.39 | 23 | 0 | 1 | 0 | 0.16 | 13 | 1 |
 | K4-C24 | Qwen3.5-27B | self | - | edit-v8 | sampled | 8 | 0.60 | 0.91 | 0.69 | 6 | 1 | 1 | 0 | 0.47 | 7 | 0 |
@@ -110,11 +111,12 @@ Managed episodes (every condition except `none`), by actor:
 | K8-C48 | Qwen3.5-0.8B | peer_same | Qwen3.5-0.8B | edit-v8 | greedy | 16 | 0.16 | 0.16 | 1.00 | 0 | 16 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-0.8B | self | - | edit-v7 | greedy | 4 | 0.17 | 0.17 | 1.00 | 0 | 4 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-0.8B | self | - | edit-v8 | greedy | 8 | 0.17 | 0.17 | 1.00 | 0 | 8 | 0 | 0 | 0.00 | 0 | 0 |
-| K8-C48 | Qwen3.5-27B | none | - | - | greedy | 8 | 0.15 | 0.15 | 1.00 | 0 | 8 | 0 | 0 | 0.00 | 0 | 0 |
+| K8-C48 | Qwen3.5-27B | none | - | - | greedy | 16 | 0.15 | 0.15 | 1.00 | 0 | 16 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-27B | none | - | - | sampled | 8 | 0.15 | 0.15 | 1.00 | 0 | 8 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-27B | peer_same | Qwen3.5-27B | edit-v7 | greedy | 4 | 0.34 | 0.45 | 0.75 | 0 | 3 | 1 | 0 | 0.71 | 4 | 0 |
 | K8-C48 | Qwen3.5-27B | peer_same | Qwen3.5-27B | edit-v8 | greedy | 4 | 0.34 | 0.65 | 0.53 | 0 | 1 | 3 | 0 | 0.69 | 4 | 0 |
 | K8-C48 | Qwen3.5-27B | peer_same | Qwen3.5-27B | edit-v8 | sampled | 16 | 0.30 | 0.59 | 0.67 | 5 | 0 | 11 | 0 | 0.79 | 16 | 8 |
+| K8-C48 | Qwen3.5-27B | rule_needle | - | rule-needle-v1 | greedy | 8 | 0.79 | 0.79 | 1.00 | 6 | 0 | 2 | 0 | 0.41 | 8 | 2 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v7 | greedy | 4 | 0.15 | 0.15 | 1.00 | 0 | 4 | 0 | 0 | 0.35 | 1 | 0 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v8 | greedy | 8 | 0.14 | 1.00 | 0.14 | 7 | 0 | 1 | 0 | 0.31 | 8 | 0 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v8 | sampled | 16 | 0.19 | 0.80 | 0.32 | 5 | 0 | 11 | 0 | 0.71 | 16 | 7 |

@@ -33,6 +33,7 @@ GROUPS = {
     ("27B", "none"): ("27B, none", AQUA),
     ("27B", "self"): ("27B, self", AQUA),
     ("27B", "peer_same"): ("27B, peer_same", AQUA),
+    ("27B", "rule_needle"): ("27B + rule", AQUA),
 }
 # Label offsets in points (dx, dy, ha) per (level, label).
 OFFSETS = {
@@ -45,14 +46,17 @@ OFFSETS = {
     ("K4-C24", "4B + 27B manager, thinking"): (8, 5, "left"),
     ("K4-C24", "27B, none"): (-8, -3, "right"),
     ("K4-C24", "27B, self"): (8, 0, "left"),
-    ("K4-C24", "27B, peer_same"): (0, -14, "center"),
+    ("K4-C24", "27B, peer_same"): (-8, 0, "right"),
+    ("K4-C24", "27B + rule"): (0, -12, "center"),
     ("K8-C48", "2B, none"): (-7, 8, "left"),
     ("K8-C48", "2B + rule"): (8, 0, "left"),
     ("K8-C48", "2B + 9B manager"): (-9, -10, "right"),
     ("K8-C48", "2B + 9B manager, thinking"): (-8, 0, "right"),
     ("K8-C48", "2B + 27B manager"): (-9, 0, "right"),
     ("K8-C48", "2B + 27B manager, thinking"): (-8, 0, "right"),
-    ("K8-C48", "4B + 27B manager, thinking"): (-8, 0, "right"),
+    ("K8-C48", "4B + 27B manager, thinking"): (-8, 10, "right"),
+    ("K8-C48", "27B, none"): (-8, 0, "right"),
+    ("K8-C48", "27B + rule"): (0, -14, "center"),
 }
 # Which dot of a multi-wording cluster carries its label.
 ANCHORS = {
@@ -180,9 +184,9 @@ fig.text(
     0.06,
     0.905,
     "Prefix-reuse FLOPs with the prefix-cache hits vLLM measured; greedy, "
-    "rounds 25-28 (docs/tables/cost_needle.md).\nEach peer-manager circle is one prompt "
-    "wording without thinking; triangles are edit-v8 with manager thinking. 27B-alone runs at "
-    "K8-C48 predate cache logging.",
+    "rounds 25-29 (docs/tables/cost_needle.md).\nEach peer-manager circle is one prompt "
+    "wording without thinking; triangles are edit-v8 with manager thinking. 27B self and "
+    "peer_same at K8-C48 predate cache logging.",
     fontsize=8.5,
     color=MUTED,
     ha="left",

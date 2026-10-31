@@ -684,6 +684,17 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     the 2,048-token output cap before `READY_FOR_NEXT_OP`, the runner's reminder yields the same cut
     reply, and the episode loops to `max_steps` (14/24 ops delivered = 56/96 needles). The rule lost
     nothing. K8 s42 escaped after one cut reply by switching to id ranges; K4 s45 after 9.
+  - 31451066 done (6.3 h, exit 0, a1124u19n01, no vLLM ERROR). 27B + rule: K4-C24 0.64 (7/8 loop,
+    s45 1.00), K8-C48 0.79 (s47/s48 loop at 8/48 and 7/48 ops, 0.17/0.15; others 1.00) → **P11
+    falsified** at both levels. **P12 falsified**: 14.2 PF (K4, +63% vs 8.7) and 25.5 PF (K8, +6% vs
+    24.1). 27B `none` K8-C48 0.15. Termination table now 47/136 managed 27B-actor episodes at
+    `max_steps`, 31 cap loops. Cost figure regenerated with the 27B + rule point.
+  - Replay probe drafted (not submitted): `scripts/replay_probe.py` + `slurm/replay_probe.sbatch` on
+    the harness branch (uncommitted), `docs/preregistration-v3.md` (draft). Single calls rebuilt from
+    31451066 snapshots, arms R1-R6, ~320 calls, one H200.
+  - Process slip: earlier on 2026-10-30 a few read-only `python3` one-liners ran on the Bouchet login
+    node to read logs, against the "no Python on login nodes" rule. Pull run dirs and analyse
+    locally instead.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
