@@ -3,8 +3,9 @@
 Usage: python scripts/plot_mechanism.py OUT.png
 Reads docs/tables/mechanism_needle.md (built by scripts/mechanism_table.py). x = share of applied
 manager events that `note` or `replace` (keep needles while removing their block), y = mean reward -
-`none`. Color = size of the model that edits (the actor itself for `self`), an ordinal blue ramp;
-shape = decoding (greedy, sampled, manager thinking). Cells with n < 4 or no applied edit are left out.
+`none`. Color = the model that edits (the actor itself for `self`): Qwen3.5 sizes on an ordinal blue
+ramp, Gemma 4 sizes on a magenta pair; shape = decoding (greedy, sampled, manager thinking). Cells
+with n < 4 or no applied edit are left out.
 """
 
 import sys
@@ -18,9 +19,17 @@ from matplotlib.lines import Line2D
 from mechanism_table import LEVELS
 
 INK, SECONDARY, MUTED, GRID, SURFACE = "#0b0b0b", "#52514e", "#898781", "#e6e5e0", "#fcfcfb"
-RAMP = {"0.8B": "#86b6ef", "2B": "#5598e7", "4B": "#2a78d6", "9B": "#1c5cab", "27B": "#0d366b"}
+RAMP = {"0.8B": "#86b6ef", "2B": "#5598e7", "4B": "#2a78d6", "9B": "#1c5cab", "27B": "#0d366b",
+        "Gemma 12B": "#e0559a", "Gemma 31B": "#9e1f63"}  # fmt: skip
 SHAPES = {"greedy": "o", "sampled": "s", "thinking": "^"}
 TABLE = "docs/tables/mechanism_needle.md"
+
+
+def editor_label(editor):
+    """'Qwen3.5-27B-FP8' -> '27B'; 'gemma-4-31B-it' -> 'Gemma 31B'."""
+    if editor.startswith("gemma-4-"):
+        return "Gemma " + editor.removeprefix("gemma-4-").removesuffix("-it")
+    return editor.removeprefix("Qwen3.5-").removesuffix("-FP8")
 
 
 def cells(path=TABLE):
@@ -38,7 +47,7 @@ def cells(path=TABLE):
         out.append(
             {
                 "level": level,
-                "size": editor.removeprefix("Qwen3.5-").removesuffix("-FP8"),
+                "size": editor_label(editor),
                 "style": "thinking" if version.endswith("+think") else decoding,
                 "gain": float(c[8]),
                 "protective": float(c[9]),
@@ -79,16 +88,16 @@ for ax, level in zip(axes, LEVELS, strict=True):
 axes[0].set_ylabel("reward minus none", fontsize=9.5, color=INK)
 
 legend = [
-    Line2D([], [], marker="o", ls="none", ms=8, color=c, label=f"{s} editor")
+    Line2D([], [], marker="o", ls="none", ms=8, color=c, label=s if "Gemma" in s else f"Qwen {s}")
     for s, c in RAMP.items()
 ] + [Line2D([], [], marker=m, ls="none", ms=8, color=SECONDARY, label=s) for s, m in SHAPES.items()]
-fig.legend(handles=legend, loc="lower center", ncol=8, frameon=False, fontsize=9,
+fig.legend(handles=legend, loc="lower center", ncol=5, frameon=False, fontsize=9,
            labelcolor=SECONDARY, bbox_to_anchor=(0.5, 0.0))  # fmt: skip
 fig.suptitle("Gain over no management rises with the share of protective edits", fontsize=12,
              color=INK, x=0.06, ha="left")  # fmt: skip
 fig.text(0.06, 0.905, "One point per managed cell (condition x manager x prompt wording x decoding; "
-         "n >= 4 episodes). Editor = the model that edits\n(the actor itself for self). "
-         "docs/tables/mechanism_needle.md", fontsize=8.5, color=MUTED, ha="left", va="top")  # fmt: skip
-fig.tight_layout(rect=(0, 0.06, 1, 0.86))
+         "n >= 4 episodes). Editor = the model that edits\n(the actor itself for self): Qwen3.5 "
+         "in blue, Gemma 4 in magenta. docs/tables/mechanism_needle.md", fontsize=8.5, color=MUTED, ha="left", va="top")  # fmt: skip
+fig.tight_layout(rect=(0, 0.12, 1, 0.86))
 fig.savefig(sys.argv[1], dpi=160, facecolor=SURFACE)
 print("wrote", sys.argv[1])

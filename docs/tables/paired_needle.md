@@ -25,8 +25,11 @@ sign test over seeds. Seeds share each level's layout, so CIs cover instance noi
 | K4-C24 | Qwen3.5-27B | self | - | edit-v8 | sampled | 8 | 8 | 0.60 | +0.31 | [+0.18, +0.44] | 7/0 | 0.016 |
 | K4-C24 | Qwen3.5-27B-FP8 | peer_same | Qwen3.5-27B-FP8 | edit-v7 | greedy | 4 | 4 | 0.90 | +0.60 | [+0.50, +0.71] | 4/0 | 0.125 |
 | K4-C24 | Qwen3.5-27B-FP8 | self | - | edit-v7 | greedy | 4 | 4 | 0.29 | +0.00 | [+0.00, +0.00] | 0/0 | 1.000 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8 | greedy | 8 | 8 | 0.32 | -0.02 | [-0.09, +0.06] | 4/4 | 1.000 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para3 | greedy | 8 | 8 | 0.82 | +0.48 | [+0.38, +0.59] | 8/0 | 0.008 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para4 | greedy | 8 | 8 | 0.19 | -0.15 | [-0.20, -0.08] | 0/7 | 0.016 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v7 | greedy | 4 | 4 | 1.00 | +0.67 | [+0.67, +0.67] | 4/0 | 0.125 |
-| K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 20 | 20 | 0.99 | +0.66 | [+0.65, +0.67] | 20/0 | 0.000 |
+| K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 20 | 22 | 0.99 | +0.66 | [+0.65, +0.67] | 20/0 | 0.000 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | sampled | 8 | 8 | 0.76 | +0.43 | [+0.34, +0.51] | 8/0 | 0.008 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+example | greedy | 8 | 8 | 0.38 | +0.04 | [+0.04, +0.04] | 8/0 | 0.008 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+mustnote | greedy | 8 | 8 | 0.95 | +0.61 | [+0.56, +0.67] | 8/0 | 0.008 |
@@ -38,6 +41,9 @@ sign test over seeds. Seeds share each level's layout, so CIs cover instance noi
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v5 | greedy | 4 | 4 | 0.79 | +0.46 | [+0.30, +0.61] | 4/0 | 0.125 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v6 | greedy | 4 | 4 | 0.38 | +0.04 | [+0.04, +0.04] | 4/0 | 0.125 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v7 | greedy | 8 | 8 | 0.97 | +0.64 | [+0.59, +0.67] | 8/0 | 0.008 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8 | greedy | 8 | 8 | 0.94 | +0.60 | [+0.54, +0.66] | 8/0 | 0.008 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para3 | greedy | 8 | 8 | 0.90 | +0.57 | [+0.38, +0.67] | 7/1 | 0.070 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para4 | greedy | 8 | 8 | 0.87 | +0.54 | [+0.48, +0.61] | 8/0 | 0.008 |
 | K4-C24 | Qwen3.5-2B | peer_4b | Qwen3.5-4B | edit-v8 | greedy | 8 | 8 | 0.34 | +0.01 | [-0.01, +0.02] | 2/1 | 1.000 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | greedy | 8 | 8 | 0.16 | -0.18 | [-0.24, -0.11] | 0/7 | 0.016 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | sampled | 8 | 8 | 0.14 | -0.19 | [-0.22, -0.17] | 0/8 | 0.008 |
@@ -91,6 +97,9 @@ sign test over seeds. Seeds share each level's layout, so CIs cover instance noi
 | K8-C48 | Qwen3.5-27B | self | - | edit-v7 | greedy | 4 | 4 | 0.15 | +0.00 | [+0.00, +0.00] | 0/0 | 1.000 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v8 | greedy | 8 | 8 | 0.14 | -0.00 | [-0.03, +0.03] | 3/5 | 0.727 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v8 | sampled | 8 | 16 | 0.19 | +0.04 | [+0.01, +0.08] | 5/2 | 0.453 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8 | greedy | 8 | 8 | 0.16 | +0.02 | [+0.00, +0.05] | 1/0 | 1.000 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para3 | greedy | 8 | 8 | 0.53 | +0.38 | [+0.22, +0.57] | 8/0 | 0.008 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para4 | greedy | 8 | 8 | 0.08 | -0.07 | [-0.10, -0.02] | 1/6 | 0.125 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v7 | greedy | 4 | 4 | 0.33 | +0.19 | [+0.19, +0.19] | 4/0 | 0.125 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 4 | 4 | 0.29 | +0.15 | [+0.10, +0.23] | 4/0 | 0.125 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+example | greedy | 8 | 8 | 0.16 | +0.02 | [+0.00, +0.04] | 6/2 | 0.289 |
@@ -103,6 +112,9 @@ sign test over seeds. Seeds share each level's layout, so CIs cover instance noi
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v5 | greedy | 4 | 4 | 0.26 | +0.11 | [+0.09, +0.14] | 4/0 | 0.125 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v6 | greedy | 4 | 4 | 0.17 | +0.02 | [+0.02, +0.02] | 4/0 | 0.125 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v7 | greedy | 8 | 8 | 0.32 | +0.17 | [+0.13, +0.22] | 8/0 | 0.008 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8 | greedy | 8 | 8 | 0.71 | +0.57 | [+0.52, +0.62] | 8/0 | 0.008 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para3 | greedy | 8 | 8 | 0.48 | +0.33 | [+0.18, +0.48] | 7/1 | 0.070 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para4 | greedy | 8 | 8 | 0.75 | +0.61 | [+0.52, +0.69] | 8/0 | 0.008 |
 | K8-C48 | Qwen3.5-2B | peer_4b | Qwen3.5-4B | edit-v8 | greedy | 8 | 8 | 0.17 | +0.03 | [+0.02, +0.03] | 7/0 | 0.016 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | greedy | 8 | 8 | 0.06 | -0.09 | [-0.10, -0.08] | 0/8 | 0.008 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | sampled | 8 | 8 | 0.09 | -0.06 | [-0.09, -0.03] | 1/7 | 0.070 |

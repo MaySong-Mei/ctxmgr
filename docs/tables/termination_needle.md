@@ -10,7 +10,7 @@ ends at `max_steps` with the last 5 actor replies all capped.
 Managed episodes (every condition except `none`), by actor:
 
 - Qwen3.5-0.8B: 3/144 managed episodes end at `max_steps`, 0 of them in a cap loop; 13/144 have at least one capped actor reply.
-- Qwen3.5-2B: 1/448 managed episodes end at `max_steps`, 0 of them in a cap loop; 59/448 have at least one capped actor reply.
+- Qwen3.5-2B: 8/546 managed episodes end at `max_steps`, 1 of them in a cap loop; 98/546 have at least one capped actor reply.
 - Qwen3.5-4B: 6/216 managed episodes end at `max_steps`, 5 of them in a cap loop; 10/216 have at least one capped actor reply.
 - Qwen3.5-9B: 0/113 managed episodes end at `max_steps`, 0 of them in a cap loop; 1/113 have at least one capped actor reply.
 - Qwen3.5-27B: 47/136 managed episodes end at `max_steps`, 31 of them in a cap loop; 116/136 have at least one capped actor reply.
@@ -43,10 +43,13 @@ Managed episodes (every condition except `none`), by actor:
 | K4-C24 | Qwen3.5-27B-FP8 | none | - | - | greedy | 4 | 0.29 | 0.29 | 1.00 | 0 | 4 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-27B-FP8 | peer_same | Qwen3.5-27B-FP8 | edit-v7 | greedy | 4 | 0.90 | 1.00 | 0.90 | 4 | 0 | 0 | 0 | 0.46 | 4 | 0 |
 | K4-C24 | Qwen3.5-27B-FP8 | self | - | edit-v7 | greedy | 4 | 0.29 | 0.29 | 1.00 | 0 | 4 | 0 | 0 | 0.00 | 0 | 0 |
-| K4-C24 | Qwen3.5-2B | none | - | - | greedy | 128 | 0.33 | 0.33 | 1.00 | 0 | 128 | 0 | 0 | 0.01 | 1 | 0 |
+| K4-C24 | Qwen3.5-2B | none | - | - | greedy | 144 | 0.33 | 0.33 | 1.00 | 0 | 144 | 0 | 0 | 0.00 | 1 | 0 |
 | K4-C24 | Qwen3.5-2B | none | - | - | sampled | 16 | 0.33 | 0.33 | 1.00 | 0 | 16 | 0 | 0 | 0.00 | 0 | 0 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8 | greedy | 8 | 0.32 | 0.95 | 0.35 | 6 | 1 | 1 | 0 | 0.17 | 2 | 0 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para3 | greedy | 8 | 0.82 | 1.00 | 0.82 | 8 | 0 | 0 | 0 | 0.00 | 0 | 0 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para4 | greedy | 8 | 0.19 | 0.94 | 0.22 | 7 | 0 | 1 | 0 | 0.30 | 6 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v7 | greedy | 4 | 1.00 | 1.00 | 1.00 | 4 | 0 | 0 | 0 | 0.00 | 0 | 0 |
-| K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 20 | 0.99 | 1.00 | 0.99 | 20 | 0 | 0 | 0 | 0.01 | 1 | 0 |
+| K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 22 | 0.99 | 1.00 | 0.99 | 22 | 0 | 0 | 0 | 0.01 | 1 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | sampled | 8 | 0.76 | 1.00 | 0.76 | 8 | 0 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+example | greedy | 8 | 0.38 | 1.00 | 0.38 | 8 | 0 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+mustnote | greedy | 8 | 0.95 | 1.00 | 0.95 | 8 | 0 | 0 | 0 | 0.00 | 0 | 0 |
@@ -58,6 +61,9 @@ Managed episodes (every condition except `none`), by actor:
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v5 | greedy | 4 | 0.79 | 1.00 | 0.79 | 4 | 0 | 0 | 0 | 0.11 | 1 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v6 | greedy | 4 | 0.38 | 1.00 | 0.38 | 4 | 0 | 0 | 0 | 0.11 | 1 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v7 | greedy | 8 | 0.97 | 1.00 | 0.97 | 8 | 0 | 0 | 0 | 0.00 | 0 | 0 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8 | greedy | 8 | 0.94 | 1.00 | 0.94 | 8 | 0 | 0 | 0 | 0.12 | 2 | 0 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para3 | greedy | 8 | 0.90 | 0.91 | 0.99 | 7 | 0 | 1 | 0 | 0.18 | 7 | 0 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para4 | greedy | 8 | 0.87 | 1.00 | 0.87 | 8 | 0 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_4b | Qwen3.5-4B | edit-v8 | greedy | 8 | 0.34 | 0.66 | 0.53 | 1 | 7 | 0 | 0 | 0.00 | 0 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | greedy | 8 | 0.16 | 0.92 | 0.24 | 7 | 1 | 0 | 0 | 0.14 | 5 | 0 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | sampled | 8 | 0.14 | 1.00 | 0.14 | 8 | 0 | 0 | 0 | 0.03 | 2 | 0 |
@@ -120,8 +126,11 @@ Managed episodes (every condition except `none`), by actor:
 | K8-C48 | Qwen3.5-27B | self | - | edit-v7 | greedy | 4 | 0.15 | 0.15 | 1.00 | 0 | 4 | 0 | 0 | 0.35 | 1 | 0 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v8 | greedy | 8 | 0.14 | 1.00 | 0.14 | 7 | 0 | 1 | 0 | 0.31 | 8 | 0 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v8 | sampled | 16 | 0.19 | 0.80 | 0.32 | 5 | 0 | 11 | 0 | 0.71 | 16 | 7 |
-| K8-C48 | Qwen3.5-2B | none | - | - | greedy | 112 | 0.15 | 0.15 | 1.00 | 0 | 112 | 0 | 0 | 0.00 | 0 | 0 |
+| K8-C48 | Qwen3.5-2B | none | - | - | greedy | 128 | 0.15 | 0.15 | 1.00 | 0 | 128 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-2B | none | - | - | sampled | 8 | 0.15 | 0.15 | 1.00 | 0 | 8 | 0 | 0 | 0.00 | 0 | 0 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8 | greedy | 8 | 0.16 | 0.20 | 0.90 | 0 | 8 | 0 | 0 | 0.00 | 0 | 0 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para3 | greedy | 8 | 0.53 | 0.68 | 0.75 | 2 | 6 | 0 | 0 | 0.02 | 1 | 0 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para4 | greedy | 8 | 0.08 | 0.79 | 0.12 | 5 | 1 | 2 | 0 | 0.42 | 6 | 1 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v7 | greedy | 4 | 0.33 | 1.00 | 0.33 | 4 | 0 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 4 | 0.29 | 1.00 | 0.29 | 4 | 0 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+example | greedy | 8 | 0.16 | 1.00 | 0.16 | 8 | 0 | 0 | 0 | 0.00 | 0 | 0 |
@@ -134,6 +143,9 @@ Managed episodes (every condition except `none`), by actor:
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v5 | greedy | 4 | 0.26 | 1.00 | 0.26 | 4 | 0 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v6 | greedy | 4 | 0.17 | 1.00 | 0.17 | 4 | 0 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v7 | greedy | 8 | 0.32 | 1.00 | 0.32 | 8 | 0 | 0 | 0 | 0.00 | 0 | 0 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8 | greedy | 8 | 0.71 | 1.00 | 0.71 | 8 | 0 | 0 | 0 | 0.10 | 3 | 0 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para3 | greedy | 8 | 0.48 | 0.53 | 0.93 | 2 | 4 | 2 | 0 | 0.14 | 6 | 0 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para4 | greedy | 8 | 0.75 | 1.00 | 0.75 | 8 | 0 | 0 | 0 | 0.11 | 6 | 0 |
 | K8-C48 | Qwen3.5-2B | peer_4b | Qwen3.5-4B | edit-v8 | greedy | 8 | 0.17 | 0.23 | 0.77 | 0 | 8 | 0 | 0 | 0.00 | 0 | 0 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | greedy | 8 | 0.06 | 1.00 | 0.06 | 8 | 0 | 0 | 0 | 0.04 | 3 | 0 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | sampled | 8 | 0.09 | 0.97 | 0.09 | 6 | 1 | 1 | 0 | 0.02 | 2 | 0 |

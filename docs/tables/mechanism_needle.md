@@ -6,8 +6,8 @@ protective = applied events with a `note` or `replace`; unprotected = applied ev
 delete with neither; shares of applied events. empty = events with nothing applied, share of
 all events. gain = reward - `none` (same level, actor, decoding).
 
-- K4-C24: Spearman(protective share, gain) = 0.67 over 66 cells with n >= 4 and at least one applied event.
-- K8-C48: Spearman(protective share, gain) = 0.62 over 55 cells with n >= 4 and at least one applied event.
+- K4-C24: Spearman(protective share, gain) = 0.70 over 72 cells with n >= 4 and at least one applied event.
+- K8-C48: Spearman(protective share, gain) = 0.64 over 61 cells with n >= 4 and at least one applied event.
 
 | level | actor | condition | manager | version | decoding | n | reward | gain | protective | unprotected | empty | events |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -30,8 +30,11 @@ all events. gain = reward - `none` (same level, actor, decoding).
 | K4-C24 | Qwen3.5-27B | self | - | edit-v8 | sampled | 8 | 0.60 | +0.31 | 0.20 | 0.80 | 0.05 | 57 |
 | K4-C24 | Qwen3.5-27B-FP8 | peer_same | Qwen3.5-27B-FP8 | edit-v7 | greedy | 4 | 0.90 | +0.60 | 0.80 | 0.20 | 0.00 | 30 |
 | K4-C24 | Qwen3.5-27B-FP8 | self | - | edit-v7 | greedy | 4 | 0.29 | +0.00 | - | - | 1.00 | 8 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8 | greedy | 8 | 0.32 | -0.02 | 0.21 | 0.79 | 0.14 | 49 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para3 | greedy | 8 | 0.82 | +0.48 | 0.85 | 0.15 | 0.11 | 37 |
+| K4-C24 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para4 | greedy | 8 | 0.19 | -0.15 | 0.05 | 0.95 | 0.00 | 44 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v7 | greedy | 4 | 1.00 | +0.67 | 1.00 | 0.00 | 0.00 | 16 |
-| K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 20 | 0.99 | +0.66 | 0.99 | 0.01 | 0.00 | 81 |
+| K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 22 | 0.99 | +0.66 | 0.99 | 0.01 | 0.00 | 89 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | sampled | 8 | 0.76 | +0.43 | 0.70 | 0.30 | 0.00 | 33 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+example | greedy | 8 | 0.38 | +0.04 | 0.25 | 0.75 | 0.00 | 32 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+mustnote | greedy | 8 | 0.95 | +0.62 | 0.94 | 0.06 | 0.00 | 32 |
@@ -43,6 +46,9 @@ all events. gain = reward - `none` (same level, actor, decoding).
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v5 | greedy | 4 | 0.79 | +0.46 | 0.76 | 0.24 | 0.00 | 17 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v6 | greedy | 4 | 0.38 | +0.04 | 0.29 | 0.71 | 0.00 | 17 |
 | K4-C24 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v7 | greedy | 8 | 0.97 | +0.64 | 0.97 | 0.03 | 0.00 | 32 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8 | greedy | 8 | 0.94 | +0.60 | 0.91 | 0.09 | 0.21 | 43 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para3 | greedy | 8 | 0.90 | +0.57 | 1.00 | 0.00 | 0.03 | 36 |
+| K4-C24 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para4 | greedy | 8 | 0.87 | +0.54 | 0.85 | 0.15 | 0.00 | 33 |
 | K4-C24 | Qwen3.5-2B | peer_4b | Qwen3.5-4B | edit-v8 | greedy | 8 | 0.34 | +0.01 | 0.00 | 1.00 | 0.09 | 87 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | greedy | 8 | 0.16 | -0.18 | 0.00 | 1.00 | 0.40 | 48 |
 | K4-C24 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | sampled | 8 | 0.14 | -0.19 | 0.03 | 0.97 | 0.08 | 39 |
@@ -96,6 +102,9 @@ all events. gain = reward - `none` (same level, actor, decoding).
 | K8-C48 | Qwen3.5-27B | self | - | edit-v7 | greedy | 4 | 0.15 | +0.00 | 1.00 | 0.00 | 0.95 | 19 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v8 | greedy | 8 | 0.14 | -0.00 | 0.09 | 0.91 | 0.00 | 113 |
 | K8-C48 | Qwen3.5-27B | self | - | edit-v8 | sampled | 16 | 0.19 | +0.04 | 0.13 | 0.87 | 0.02 | 302 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8 | greedy | 8 | 0.16 | +0.02 | 0.60 | 0.40 | 0.57 | 23 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para3 | greedy | 8 | 0.53 | +0.38 | 0.83 | 0.17 | 0.33 | 78 |
+| K8-C48 | Qwen3.5-2B | peer_12b | gemma-4-12B-it | edit-v8+para4 | greedy | 8 | 0.08 | -0.07 | 0.04 | 0.96 | 0.15 | 98 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v7 | greedy | 4 | 0.33 | +0.19 | 0.27 | 0.73 | 0.00 | 44 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8 | greedy | 4 | 0.29 | +0.15 | 0.23 | 0.77 | 0.00 | 44 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B | edit-v8+example | greedy | 8 | 0.16 | +0.02 | 0.11 | 0.89 | 0.00 | 74 |
@@ -108,6 +117,9 @@ all events. gain = reward - `none` (same level, actor, decoding).
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v5 | greedy | 4 | 0.26 | +0.11 | 0.19 | 0.81 | 0.00 | 42 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v6 | greedy | 4 | 0.17 | +0.02 | 0.11 | 0.89 | 0.00 | 36 |
 | K8-C48 | Qwen3.5-2B | peer_27b | Qwen3.5-27B-FP8 | edit-v7 | greedy | 8 | 0.32 | +0.17 | 0.25 | 0.75 | 0.04 | 91 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8 | greedy | 8 | 0.71 | +0.57 | 0.64 | 0.36 | 0.12 | 112 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para3 | greedy | 8 | 0.48 | +0.33 | 0.91 | 0.09 | 0.35 | 71 |
+| K8-C48 | Qwen3.5-2B | peer_31b | gemma-4-31B-it | edit-v8+para4 | greedy | 8 | 0.75 | +0.61 | 0.74 | 0.26 | 0.03 | 107 |
 | K8-C48 | Qwen3.5-2B | peer_4b | Qwen3.5-4B | edit-v8 | greedy | 8 | 0.17 | +0.03 | 0.00 | 1.00 | 0.27 | 49 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | greedy | 8 | 0.06 | -0.09 | 0.00 | 1.00 | 0.08 | 79 |
 | K8-C48 | Qwen3.5-2B | peer_9b | Qwen3.5-9B | edit-v8 | sampled | 8 | 0.09 | -0.06 | 0.14 | 0.86 | 0.02 | 95 |

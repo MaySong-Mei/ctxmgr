@@ -748,6 +748,17 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     31545121 `r31-g31-para3`, 31545122 `r31-g12-para4`, 31545123 `r31-g31-para4`.
   - A first submit attempt failed before reaching `sbatch`: the script had CRLF line endings after
     a Windows rewrite. Nothing was queued.
+  - All six done (exit 0; 12B 33-55 min, 31B 1.3-2.5 h; no rejected requests; settings checked in
+    each log; the 31B `para4` manager-log ERROR lines are the forced kill at shutdown). Smoke runs
+    31540580/1 and 31543129 moved to `runs_smoke/` (git-ignored) so seed-42 smoke episodes do not
+    pool into the ladder cells. Episode table now 3,066 rows.
+  - **G1-G5 all confirmed.** 31B K4 +0.60 / +0.57 / +0.54 (v8 / para3 / para4), K8 +0.57 / +0.33 /
+    +0.61. 12B K4 −0.02 / **+0.48** / −0.15, K8 +0.02 / **+0.38** / −0.07: the median rule hides a
+    strong `para3` cell (protective 0.85 / 0.83, 8/0 seeds). Pooled Spearman 0.70 (72 cells) / 0.64
+    (61). Gemma-only Spearman 0.93 (K4) / 0.49 (K8; `para3` cells hit the wall). Actor cap loops
+    only 1 of 96 Gemma episodes. Up to 0.52 of a cell's events unparseable (12B v8 K8). GPU-s per
+    episode, 31B: 105-320 (K4), 459-806 (K8). `results.md` finding 10; mechanism figure redrawn with
+    Gemma in magenta.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor

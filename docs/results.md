@@ -8,7 +8,7 @@ and `peer_<size>` (a fixed manager of another size; mainly `peer_27b`). Managers
 (zero-shot). Each cell has 8 seeds (42–49) unless noted; differences are paired on the same instance.
 Greedy decoding with thinking off unless noted.
 
-Sources: `docs/tables/episodes_vllm.csv` (2,936 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
+Sources: `docs/tables/episodes_vllm.csv` (3,066 episodes), `docs/tables/h200_bf16_pooled.md` (greedy
 grid), `docs/tables/decoding_ablation.md` (greedy vs sampled), `docs/tables/cost_needle.md` (compute
 per episode), `docs/tables/termination_needle.md` (how episodes end; reward = delivered × kept),
 `docs/figures/`. Run log: `CLAUDE.md`.
@@ -104,7 +104,7 @@ points are in "Limits" at the end.
 
 6. **Pre-registered validation: v1 had none falsified, most informative tests inconclusive; v2 had
    two falsified by the 27B actor's output-cap loop; v3 (a replay probe of that loop) had one
-   falsified.** Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
+   falsified; v4 (the Gemma 4 ladder) had all five confirmed.** Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
    and two held-out levels: 7 confirmed, 3 inconclusive, 0 falsified
    (`docs/preregistration-results.md`). Five were structural guards that could hardly fail (P2: `self`
    equals `none`; P3/P6: `none` is 0 at KV R1000 by construction; P7: archived needles cannot count
@@ -146,6 +146,19 @@ points are in "Limits" at the end.
    - Exploratory: a reminder that names the output cap gets 9/16 replies out. None of the
      pre-listed fixes removes the loop, so no P11b episode run follows; only more output room does,
      and that changes the benchmark's 2,048-token reserve.
+
+   Pre-registration v4 (`docs/preregistration-v4.md`, round 31, Gemma 4 managers; finding 10) had all
+   five predictions confirmed:
+   - **G1 confirmed:** the 31B's K4-C24 median over wordings is +0.57; sign p < 0.05 in 2 of 3
+     wordings (`para3` 7/1, p = 0.07).
+   - **G2 confirmed:** the 31B's K8-C48 median is +0.57.
+   - **G3 confirmed as registered:** the 12B's median is −0.02 (K4) and +0.02 (K8). The median rule
+     hides the `para3` cell, where the 12B gains +0.48 / +0.38 (8/0). The falsification rule needed
+     two such wordings.
+   - **G4 confirmed:** with Gemma cells pooled in, Spearman(protective share, gain) is 0.70 (72
+     cells) and 0.64 (61).
+   - **G5 confirmed:** the 31B is above the 12B in protective share in 6 of 6 wording × level pairs,
+     and in reward in 5 of 6 (K8 `para3`: 0.48 vs 0.53).
 
 7. **Manager-size ladder: without thinking only the 27B manager helps, under seven prompt wordings;
    with thinking both 9B and 27B help, and 27B stays ahead.** Needle, greedy, 8 seeds, `none` rerun
@@ -282,9 +295,9 @@ points are in "Limits" at the end.
 9. **Across every managed cell, the gain over `none` tracks how often the manager protects needles
    when it edits.** For each Needle cell (condition × manager × prompt wording × decoding, n ≥ 4),
    the share of applied manager events that `note` or `replace` (the two ways to keep needles while
-   removing their block) correlates with reward − `none`: Spearman 0.67 over 65 cells at K4-C24 and
-   0.62 over 54 at K8-C48 (`docs/tables/mechanism_needle.md`,
-   `docs/figures/needle_protective_vs_gain.png`). The 27B cells lie close to one line, from
+   removing their block) correlates with reward − `none`: Spearman 0.67 over 65 Qwen cells at K4-C24
+   and 0.62 over 54 at K8-C48, and 0.70 over 72 / 0.64 over 61 with the Gemma cells added (finding
+   10; `docs/tables/mechanism_needle.md`, `docs/figures/needle_protective_vs_gain.png`). The 27B cells lie close to one line, from
    `example` (0.25 protective, +0.04) to `para3` (1.00, +0.67); 9B and smaller managers sit at 0–0.04
    protective. Protecting is necessary, not sufficient: the 4B self-manager and the 0.8B `peer_same`
    add notes but never delete (0 delete events), so every episode ends at the budget wall and they
@@ -293,6 +306,41 @@ points are in "Limits" at the end.
    block's needles were noted in an earlier event, so it may understate protection there.
    Paired differences with seed-level bootstrap CIs for every cell are in
    `docs/tables/paired_needle.md`.
+
+10. **A second manager family (Gemma 4) replicates the size ordering and the mechanism, but its
+    mid-size manager helps under one of three wordings.** Gemma 4 12B and 31B as fixed managers for
+    the 2B actor, Needle, greedy, thinking off, 8 seeds, edit-v8 / `para3` / `para4` (round 31,
+    pre-registration v4). Reward, with `peer` − `none` paired by seed:
+
+    | manager | wording | K4-C24 | K8-C48 | protective share (K4 / K8) |
+    |---|---|---|---|---|
+    | Gemma 31B | v8 | 0.94, +0.60 (8/0) | 0.71, +0.57 (8/0) | 0.91 / 0.64 |
+    | Gemma 31B | `para3` | 0.90, +0.57 (7/1) | 0.48, +0.33 (7/1) | 1.00 / 0.91 |
+    | Gemma 31B | `para4` | 0.87, +0.54 (8/0) | 0.75, +0.61 (8/0) | 0.85 / 0.74 |
+    | Gemma 12B | v8 | 0.32, −0.02 (4/4) | 0.16, +0.02 (1/0) | 0.21 / 0.60 |
+    | Gemma 12B | `para3` | 0.82, +0.48 (8/0) | 0.53, +0.38 (8/0) | 0.85 / 0.83 |
+    | Gemma 12B | `para4` | 0.19, −0.15 (0/7) | 0.08, −0.07 (1/6) | 0.05 / 0.04 |
+
+    - **The largest manager helps under every wording, at both levels.** At K8-C48 the Gemma 31B is
+      far above the Qwen 27B without thinking under the same three wordings: +0.57 / +0.33 / +0.61
+      against +0.15 / +0.21 / +0.05.
+    - **The 12B helps only under `para3`.** There it protects in 0.85 of applied events and gains
+      +0.48 (K4) / +0.38 (K8), 8/0 seeds. Under v8 it mostly deletes without notes (19 of 49 K4
+      events in the `{"edits": {...}}` form), and under `para4` it almost never protects and hurts.
+      The Qwen 9B gained at most +0.07 under any of seven wordings. So the size at which a manager starts
+      to protect depends on the family and the wording, while the 31B and 27B tops are robust.
+    - **Mechanism.** At K4-C24 the six Gemma cells order almost exactly by protective share
+      (Spearman 0.93). At K8-C48 they order less tightly (0.49), because the most protective cells
+      (`para3`) free too little and hit the budget wall in 6 and 4 of 8 episodes. Pooled with Qwen the
+      correlation rises slightly (finding 9). Where the 12B protects, it gains like a 27B or 31B.
+    - **The actor stays mostly stable.** In 1 of 96 episodes the 2B actor loops on replies cut at
+      2,048 (12B `para4`, K8). The heavy loops in the smoke tests did not recur at this scale.
+    - **Reply quality varies.** Up to 0.52 of a cell's manager events fail to parse (12B v8 at
+      K8-C48, 12 of 23, none of them cut at the cap). The 31B `para3` cell at K8 has 18 of 71
+      replies cut at the 4,096 cap.
+    - **Cost.** Only GPU-seconds can be compared, since there is no FLOPs term for Gemma's
+      sliding-window layers. The 31B costs 105–320 s per episode at K4-C24 and 459–806 s at K8-C48,
+      against 90 s and 281 s for the Qwen 27B manager.
 
 ## Limits
 
