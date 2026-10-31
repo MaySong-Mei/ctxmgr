@@ -102,9 +102,14 @@ points are in "Limits" at the end.
    GETs, 4B rarely or never). The 2B actor's ANSWER format breaks when the archive paragraph is added
    (`none_r` 0.00 vs `none` 0.46), so small actors are sensitive to instruction length; 2B is excluded.
 
-6. **Pre-registered validation: v1 had none falsified, most informative tests inconclusive; v2 had
-   two falsified by the 27B actor's output-cap loop; v3 (a replay probe of that loop) had one
-   falsified; v4 (the Gemma 4 ladder) had all five confirmed.** Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
+6. **Pre-registered validation:**
+   - v1: none falsified, most informative tests inconclusive;
+   - v2: two falsified by the 27B actor's output-cap loop;
+   - v3 (a replay probe of that loop): one falsified;
+   - v4 (the Gemma 4 ladder): all five confirmed;
+   - v5 (identical-input manager replay): two confirmed, one falsified.
+
+   Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
    and two held-out levels: 7 confirmed, 3 inconclusive, 0 falsified
    (`docs/preregistration-results.md`). Five were structural guards that could hardly fail (P2: `self`
    equals `none`; P3/P6: `none` is 0 at KV R1000 by construction; P7: archived needles cannot count
@@ -159,6 +164,16 @@ points are in "Limits" at the end.
      cells) and 0.64 (61).
    - **G5 confirmed:** the 31B is above the 12B in protective share in 6 of 6 wording × level pairs,
      and in reward in 5 of 6 (K8 `para3`: 0.48 vs 0.53).
+
+   Pre-registration v5 (`docs/preregistration-v5.md`, round 32; finding 11) replayed 48 manager
+   events as identical inputs:
+   - **R1 confirmed:** greedy replays reproduce the logged first-event outcome in 248 of 248
+     (manager, wording, level, seed) cases.
+   - **R2 confirmed:** on later events the Gemma 12B succeeds in 0.66 of contexts under `para3`
+     against 0.06 under v8 (+0.59).
+   - **R3 falsified:** the Qwen 27B succeeds in only 0.67 / 0.50 / 0.38 of all 48 contexts under v8,
+     `para1` and `para4` (registered floor 0.70). The Qwen 9B succeeds in 0.00 under every wording.
+     The Gemma 31B ranges from 0.71 to 0.92.
 
 7. **Manager-size ladder: without thinking only the 27B manager helps, under seven prompt wordings;
    with thinking both 9B and 27B help, and 27B stays ahead.** Needle, greedy, 8 seeds, `none` rerun
@@ -341,6 +356,42 @@ points are in "Limits" at the end.
     - **Cost.** Only GPU-seconds can be compared, since there is no FLOPs term for Gemma's
       sliding-window layers. The 31B costs 105–320 s per episode at K4-C24 and 459–806 s at K8-C48,
       against 90 s and 281 s for the Qwen 27B manager.
+
+11. **On identical inputs, wording changes later manager edits, not the first one; later edits are
+    where even the largest managers slip.** Round 32 replayed the first three manager events of
+    job 31545119's 16 episodes (2B actor + Gemma 31B, v8) as fixed inputs. Each manager got the
+    same 48 contexts under five wordings. Success = every needle survives the edits and ≥ 30% of the
+    context is freed (`docs/tables/manager_replay.md`).
+
+    | manager | first event, any wording | later events: v8 / `para1` / `para2` / `para3` / `para4` |
+    |---|---|---|
+    | Gemma 31B | 0.69-1.00 | 0.84 / 0.72 / 0.84 / 0.88 / 0.69 |
+    | Qwen 27B | 1.00 | 0.50 / 0.25 / 0.84 / 0.75 / 0.06 |
+    | Gemma 12B | 0.00-0.38 | 0.06 / 0.28 / 0.00 / 0.66 / 0.03 |
+    | Qwen 9B | 0.00 | 0.00 under every wording |
+
+    - **The first event is easy for the large managers.** Every needle still sits in an operation
+      block, and the 27B and 31B note and delete correctly under almost every wording. The 12B
+      succeeds on the first event about as often under v8 as under `para3`.
+    - **Later events need selective work.** By then the notes block already holds the earlier needles,
+      and only the new operation blocks need copying. Wording decides here, even for the 27B (0.06
+      under `para4`). The same holds on the managers' own trajectories (from the episode logs: 27B
+      `para4` 0.09, v8 0.88; Gemma 12B `para3` 0.59, v8 0.27). On the 31B's states the 27B under v8
+      does worse than on its own (0.50 vs 0.88), so states shaped by another manager are partly
+      out of distribution.
+    - **The 12B's `para3` gain comes from later events** (R2). `para3` is the only wording that
+      spells out a numbered procedure (read the task, judge each block, check for only copies, note,
+      then reply). Which step matters was not tested.
+    - **Under `para3` the 12B is near a threshold, not reliably right.** With Gemma's recommended
+      sampling it succeeds in 0.34 of replies (0.54 greedy), and 28 of 48 contexts give mixed results
+      over 4 samples. Under v8 it reliably fails (35 of 48 contexts 0/4).
+    - **How the 12B fails depends on the wording:**
+      - v8 and `para4`: it deletes without noting (21 and 39 of 48);
+      - `para2`: it keeps everything but frees too little (22 of 48);
+      - parse errors: 1-15 per wording; replies cut at the cap: 0-4.
+    - **Measurement.** 3 of the 32 later contexts contain the 2B actor's output-cap loop, whose
+      replies repeat made-up needle ids. A gold-only count (ids outside actor replies) changes no
+      verdict (deviation D2).
 
 ## Limits
 

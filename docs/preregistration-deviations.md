@@ -27,3 +27,17 @@
   changes. The exact-reproduction requirement is downgraded to "settings and harness reproduce; greedy
   outputs may differ by server state", and any confirmatory result is interpreted with this
   non-determinism in mind.
+
+## D2 (pre-registration v5): analyses added after seeing the replay results
+
+- **Registered measure.** `kept` counts every needle id in the context, including ids that appear only
+  in the 2B actor's replies. 3 of the 32 later-event contexts contain an actor output-cap loop, whose
+  replies repeat made-up needle ids (e.g. `#12345678`). A manager that deletes those replies is scored
+  as losing needles.
+- **Added after the results (exploratory, not confirmatory).** First, a gold-only `kept` that counts
+  ids in non-assistant blocks (operation blocks and the notes block). Second, later-event success
+  split by whether the context holds an actor loop (≥ 3 runner reminders). Third, each manager's
+  later-event success on its own episode trajectories, from the round-31 and earlier logs.
+- **Effect on the verdicts.** None. R1-R3 are scored on the registered measure. The gold-only
+  measure changes no verdict: the 12B gap is +0.59 either way, and the Qwen 27B stays below 0.70
+  under v8, `para1` and `para4`.

@@ -41,6 +41,10 @@ Other tables:
   (done / budget wall / turn cap), the share of actor replies cut at the 2,048-token output cap, cap
   loops (turn-cap endings whose last 5 actor replies are all cut), and reward split into the share of
   the stream delivered × the share of delivered needles kept (`scripts/termination_audit.py`).
+- `manager_replay.md`: round-32 identical-input replay of Needle manager events (jobs
+  31558632-31558635): success, kept, freed, parse errors and caps per manager × decoding × wording ×
+  first / later event (`scripts/manager_replay.py summarize` on the harness branch
+  `may/manager-replay`; design in `docs/preregistration-v5.md`).
 - `replay_probe.md`: round-30 replay probe (job 31513325) of the 27B actor's output-cap loop, per
   arm and probe point (`scripts/replay_probe.py summarize` on the harness branch; design in
   `docs/preregistration-v3.md`).

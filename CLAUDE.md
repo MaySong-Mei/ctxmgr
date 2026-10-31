@@ -772,6 +772,18 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   under v8 / `para3` / `para4`. R1-R3.
   - 31558632 `r32-mr-g12` (Gemma 12B, + sampled), 31558633 `r32-mr-g31`, 31558634 `r32-mr-q9`,
     31558635 `r32-mr-q27`. Output `runs/mreplay-<job>/replay.jsonl`.
+  - All four done in 5-15 min (exit 0; the cluster rebuild check passed for all 48 contexts; 816 /
+    240 / 240 / 240 rows). Table `docs/tables/manager_replay.md`; `results.md` finding 11.
+  - **R1 confirmed** (248/248 first events reproduced). **R2 confirmed** (12B later events:
+    `para3` 0.66 vs v8 0.06). **R3 falsified**: Qwen 27B 0.67 / 0.50 / 0.38 over all 48 contexts
+    under v8 / `para1` / `para4` (its later events fail: v8 0.50, `para4` 0.06; first events
+    1.00). Qwen 9B 0.00 everywhere; Gemma 31B 0.71-0.92.
+  - On their own trajectories (episode logs), later-event success is 27B v8 0.88 / `para4` 0.09 and
+    12B `para3` 0.59 / v8 0.27. 12B sampled: `para3` 0.34 (28/48 contexts mixed over 4 samples),
+    v8 35/48 contexts 0/4. 12B failure types: v8 and `para4` delete without notes; `para2` frees too
+    little.
+  - Post-hoc gold-only measure (actor-loop replies carry made-up needle ids in 3 of 32 later
+    contexts) changes no verdict: deviation D2.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
