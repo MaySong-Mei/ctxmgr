@@ -1,7 +1,6 @@
 {
-  "release": "native-clm-vllm-bf16-2",
-  "prepared_at_utc": "2026-10-31T02:18:39Z",
-  "source_archive_sha256": "0cafca6037461e40cf6c24e15b0a2c6613fdfe7b1d21fc1fc7f9916edfc8eeb3",
+  "release": "native-clm-vllm-bf16-3-size-matched-gpus",
+  "prepared_at_utc": "2026-10-31T02:39:13Z",
   "planned_episodes": 240,
   "models": [
     "0.8B",
@@ -11,8 +10,8 @@
     "27B"
   ],
   "local_validation": {
-    "tests_collected": 73,
-    "passed": 70,
+    "tests_collected": 74,
+    "passed": 71,
     "errors_missing_dependencies": 2,
     "skipped": 1
   },

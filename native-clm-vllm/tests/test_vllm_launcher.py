@@ -104,22 +104,33 @@ class LauncherTests(unittest.TestCase):
     def test_complete_dependency_chain_and_frozen_grid(self):
         suite = self.submit()
         jobs = self.calls("sbatch")
-        self.assertEqual(len(jobs), 3)
-        setup, array, report = [job["argv"] for job in jobs]
+        self.assertEqual(len(jobs), 7)
+        setup, *arrays, report = [job["argv"] for job in jobs]
         self.assertIn("--hold", setup)
         self.assertIn("--partition=day", setup)
-        self.assertIn("--array=0-19%2", array)
-        self.assertIn("--dependency=afterok:101", array)
-        self.assertIn("--gpus-per-node=h200:1", array)
-        self.assertIn("--partition=gpu_h200", array)
-        self.assertIn("--dependency=afterany:102", report)
-        self.assertIn("--kill-on-invalid-dep=yes", array)
+        expected = (
+            (0, "gpu", "a5000", "48G"),
+            (4, "gpu", "a5000", "48G"),
+            (8, "gpu", "rtx_5000_ada", "64G"),
+            (12, "gpu", "a40", "96G"),
+            (16, "gpu_h200", "h200", "128G"),
+        )
+        for array, (start, partition, gpu, memory) in zip(arrays, expected, strict=True):
+            self.assertIn(f"--array={start}-{start + 3}%2", array)
+            self.assertIn("--dependency=afterok:101", array)
+            self.assertIn(f"--gpus-per-node={gpu}:1", array)
+            self.assertIn(f"--partition={partition}", array)
+            self.assertIn(f"--mem={memory}", array)
+            self.assertIn("--kill-on-invalid-dep=yes", array)
+        self.assertIn("--dependency=afterany:102:103:104:105:106", report)
         self.assertEqual(self.calls()[-1], {"tool": "scontrol", "argv": ["release", "101"]})
         cells = (suite / "cells.tsv").read_text().splitlines()
         self.assertEqual(len(cells), 21)
         self.assertEqual(cells[-1], "19\t27B\t45")
         self.assertEqual(
-            (suite / "jobs.tsv").read_text(), "role\tjob_id\nsetup\t101\narray\t102\nreport\t103\n"
+            (suite / "jobs.tsv").read_text(),
+            "role\tjob_id\nsetup\t101\narray_08B\t102\narray_2B\t103\n"
+            "array_4B\t104\narray_9B\t105\narray_27B\t106\nreport\t107\n",
         )
         (self.package / "README.md").write_text("Changed after submit.\n")
         self.assertEqual((suite / "source/README.md").read_text(), "Frozen source fixture.\n")
@@ -128,7 +139,7 @@ class LauncherTests(unittest.TestCase):
     def test_check_submits_no_jobs_or_suite(self):
         result = self.run_launcher("check", "--config", self.config)
         self.assertIn("no jobs will be submitted", result.stdout)
-        self.assertEqual(len(self.calls("sbatch")), 3)
+        self.assertEqual(len(self.calls("sbatch")), 7)
         self.assertTrue(all("--test-only" in call["argv"] for call in self.calls("sbatch")))
         self.assertFalse(self.runs.exists())
         self.assertFalse((self.fake / "count").exists())
@@ -139,19 +150,19 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(len(self.calls("sbatch")), 2)
         self.assertEqual(self.calls("scontrol"), [])
         self.assertEqual((suite / "jobs.tsv").read_text(), "role\tjob_id\nsetup\t101\n")
-        self.assertEqual((suite / "submission/state").read_text(), "uncertain:array\n")
+        self.assertEqual((suite / "submission/state").read_text(), "uncertain:array_08B\n")
 
     def test_malformed_response_halts_without_releasing(self):
         self.run_launcher("submit", "--config", self.config, success=False, FAKE_MALFORMED_AT="3")
         suite = next(self.runs.glob("clm-vllm-*"))
         self.assertEqual(self.calls("scontrol"), [])
         self.assertNotIn("report\t", (suite / "jobs.tsv").read_text())
-        self.assertEqual((suite / "submission/state").read_text(), "uncertain:report\n")
+        self.assertEqual((suite / "submission/state").read_text(), "uncertain:array_2B\n")
 
     def test_release_failure_retains_all_recorded_ids(self):
         self.run_launcher("submit", "--config", self.config, success=False, FAKE_RELEASE_FAIL="1")
         suite = next(self.runs.glob("clm-vllm-*"))
-        self.assertIn("report\t103", (suite / "jobs.tsv").read_text())
+        self.assertIn("report\t107", (suite / "jobs.tsv").read_text())
         self.assertEqual((suite / "submission/state").read_text(), "release-requested:101\n")
 
     def test_report_only_submits_cpu_snapshot(self):
@@ -162,18 +173,18 @@ class LauncherTests(unittest.TestCase):
         self.assertFalse(any(arg.startswith("--array=") for arg in snapshot))
         self.assertFalse(any(arg.startswith("--gpus") for arg in snapshot))
         self.assertEqual(snapshot[-2:], ["report", str(suite)])
-        self.assertIn("snapshot\t104", (suite / "jobs.tsv").read_text())
+        self.assertIn("snapshot\t108", (suite / "jobs.tsv").read_text())
 
     def test_frozen_config_tamper_is_rejected(self):
         suite = self.submit()
         with (suite / "config.env").open("a") as handle:
             handle.write("CLM_PARALLEL=20\n")
         self.run_launcher("report", suite, success=False)
-        self.assertEqual(len(self.calls("sbatch")), 3)
+        self.assertEqual(len(self.calls("sbatch")), 7)
 
     def test_invalid_parallelism_cannot_submit(self):
         with self.config.open("a") as handle:
-            handle.write("CLM_PARALLEL=21\n")
+            handle.write("CLM_PARALLEL=5\n")
         self.run_launcher("submit", "--config", self.config, success=False)
         self.assertEqual(self.calls(), [])
 

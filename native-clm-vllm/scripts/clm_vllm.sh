@@ -3,10 +3,16 @@
 set -euo pipefail
 
 package_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
-config_keys=(CLM_ACCOUNT CLM_QOS CLM_CPU_PARTITION CLM_GPU_PARTITION CLM_GPU_TYPE
+model_sizes=(0.8B 2B 4B 9B 27B)
+model_keys=(08B 2B 4B 9B 27B)
+gpu_keys=()
+for key in "${model_keys[@]}"; do
+    gpu_keys+=("CLM_GPU_${key}_PARTITION" "CLM_GPU_${key}_TYPE" "CLM_GPU_${key}_MEM")
+done
+config_keys=(CLM_ACCOUNT CLM_QOS CLM_CPU_PARTITION "${gpu_keys[@]}"
     CLM_PARALLEL PROJECT_DIR SCRATCH_DIR CLM_RUNS_DIR HF_HOME UV_CACHE_DIR
     VLLM_CACHE_ROOT TRITON_CACHE_DIR CLM_IMAGE CONTAINER_MODULE
-    CLM_SETUP_CPUS CLM_SETUP_MEM CLM_SETUP_TIME CLM_GPU_CPUS CLM_GPU_MEM
+    CLM_SETUP_CPUS CLM_SETUP_MEM CLM_SETUP_TIME CLM_GPU_CPUS
     CLM_GPU_TIME CLM_REPORT_CPUS CLM_REPORT_MEM CLM_REPORT_TIME
     CLM_MAX_MODEL_LEN CLM_GPU_MEMORY_UTILIZATION CLM_SERVER_READY_TIMEOUT)
 
@@ -20,7 +26,7 @@ Usage:
 
 check   Tests resource requests with sbatch --test-only; submits no jobs.
 submit  Creates a NEW suite: 5 models x 4 seeds x 6 levels x 2 conditions.
-        Submits setup, a 20-task GPU array, and a dependent final report.
+        Submits setup, five four-task model GPU arrays, and a dependent report.
 status  Displays recorded jobs, scheduler state, and the latest report status.
 report  Submits a CPU-only report snapshot; never reruns model episodes.
 
@@ -42,7 +48,11 @@ validate_config() {
             [[ -n "$value" ]] || fail "Empty configuration key: $key"
         fi
     done
-    for key in CLM_ACCOUNT CLM_QOS CLM_CPU_PARTITION CLM_GPU_PARTITION CLM_GPU_TYPE; do
+    for key in CLM_ACCOUNT CLM_QOS CLM_CPU_PARTITION; do
+        [[ "${!key}" =~ ^[a-zA-Z0-9_.-]+$ ]] || fail "Invalid resource name: $key"
+    done
+    for key in "${gpu_keys[@]}"; do
+        [[ "$key" != *_MEM ]] || continue
         [[ "${!key}" =~ ^[a-zA-Z0-9_.-]+$ ]] || fail "Invalid resource name: $key"
     done
     for key in PROJECT_DIR SCRATCH_DIR CLM_RUNS_DIR HF_HOME UV_CACHE_DIR VLLM_CACHE_ROOT TRITON_CACHE_DIR CLM_IMAGE; do
@@ -51,10 +61,11 @@ validate_config() {
     for key in CLM_SETUP_CPUS CLM_GPU_CPUS CLM_REPORT_CPUS CLM_SERVER_READY_TIMEOUT; do
         [[ "${!key}" =~ ^[1-9][0-9]*$ ]] || fail "A positive integer is required: $key"
     done
-    [[ "$CLM_PARALLEL" =~ ^([1-9]|1[0-9]|20)$ ]] || fail 'CLM_PARALLEL must be between 1 and 20.'
+    [[ "$CLM_PARALLEL" =~ ^[1-4]$ ]] || fail 'CLM_PARALLEL must be between 1 and 4 per model.'
     [[ "$CLM_MAX_MODEL_LEN" = 81920 ]] || fail 'This release requires CLM_MAX_MODEL_LEN=81920.'
     [[ "$CLM_GPU_MEMORY_UTILIZATION" =~ ^0\.[0-9]+$ ]] || fail 'GPU memory utilization must be a decimal between 0 and 1.'
-    for key in CLM_SETUP_MEM CLM_GPU_MEM CLM_REPORT_MEM; do
+    for key in CLM_SETUP_MEM CLM_REPORT_MEM "${gpu_keys[@]}"; do
+        [[ "$key" = *_MEM ]] || continue
         [[ "${!key}" =~ ^[1-9][0-9]*[KMGT]?$ ]] || fail "Invalid memory value: $key"
     done
     for key in CLM_SETUP_TIME CLM_GPU_TIME CLM_REPORT_TIME; do
@@ -76,15 +87,19 @@ load_config() {
 }
 
 resource_args() {
-    local mode=$1
+    local mode=$1 size=${2:-} key partition type memory
     args=(--account="$CLM_ACCOUNT" --qos="$CLM_QOS" --nodes=1 --ntasks=1)
     case "$mode" in
         setup)
             args+=(--partition="$CLM_CPU_PARTITION" --cpus-per-task="$CLM_SETUP_CPUS"
                 --mem="$CLM_SETUP_MEM" --time="$CLM_SETUP_TIME") ;;
         cell)
-            args+=(--partition="$CLM_GPU_PARTITION" --gpus-per-node="${CLM_GPU_TYPE}:1"
-                --cpus-per-task="$CLM_GPU_CPUS" --mem="$CLM_GPU_MEM" --time="$CLM_GPU_TIME") ;;
+            case "$size" in 0.8B) key=08B ;; 2B|4B|9B|27B) key=$size ;; *) fail "Invalid cell size: $size" ;; esac
+            partition="CLM_GPU_${key}_PARTITION"
+            type="CLM_GPU_${key}_TYPE"
+            memory="CLM_GPU_${key}_MEM"
+            args+=(--partition="${!partition}" --gpus-per-node="${!type}:1"
+                --cpus-per-task="$CLM_GPU_CPUS" --mem="${!memory}" --time="$CLM_GPU_TIME") ;;
         report)
             args+=(--partition="$CLM_CPU_PARTITION" --cpus-per-task="$CLM_REPORT_CPUS"
                 --mem="$CLM_REPORT_MEM" --time="$CLM_REPORT_TIME") ;;
@@ -115,7 +130,7 @@ freeze_source() {
     printf 'role\tjob_id\n' > "$suite/jobs.tsv"
     printf 'index\tsize\tseed\n' > "$suite/cells.tsv"
     local index=0 size seed
-    for size in 0.8B 2B 4B 9B 27B; do
+    for size in "${model_sizes[@]}"; do
         for seed in 42 43 44 45; do
             printf '%s\t%s\t%s\n' "$index" "$size" "$seed" >> "$suite/cells.tsv"
             index=$((index + 1))
@@ -165,9 +180,14 @@ case "$command_name" in
         load_config "$@"
         require_command sbatch
         printf 'Resource test only; no jobs will be submitted.\n'
-        for mode in setup cell report; do
+        for mode in setup report; do
             resource_args "$mode"
             printf 'Checking %s allocation...\n' "$mode"
+            sbatch --test-only "${args[@]}" --wrap='true'
+        done
+        for size in "${model_sizes[@]}"; do
+            resource_args cell "$size"
+            printf 'Checking %s GPU allocation...\n' "$size"
             sbatch --test-only "${args[@]}" --wrap='true'
         done
         ;;
@@ -187,21 +207,31 @@ case "$command_name" in
         record_submit setup "${common[@]}" "${args[@]}" --hold --job-name=ctxmgr-clm-setup \
             --output="$suite/logs/clm-setup-%j.out" "$worker" setup "$suite"
         setup_id=$submitted_id
-        resource_args cell
-        record_submit array "${common[@]}" "${args[@]}" --job-name=ctxmgr-clm-vllm \
-            --array="0-19%${CLM_PARALLEL}" --dependency="afterok:$setup_id" --kill-on-invalid-dep=yes \
-            --output="$suite/logs/clm-cell-%A_%a.out" "$worker" cell "$suite"
-        array_id=$submitted_id
+        array_ids=()
+        for i in "${!model_sizes[@]}"; do
+            size=${model_sizes[$i]}
+            key=${model_keys[$i]}
+            start=$((i * 4))
+            end=$((start + 3))
+            resource_args cell "$size"
+            record_submit "array_${key}" "${common[@]}" "${args[@]}" \
+                --job-name="ctxmgr-clm-${key}" --array="${start}-${end}%${CLM_PARALLEL}" \
+                --dependency="afterok:$setup_id" --kill-on-invalid-dep=yes \
+                --output="$suite/logs/clm-cell-%A_%a.out" "$worker" cell "$suite"
+            array_ids+=("$submitted_id")
+        done
+        printf -v array_dependency '%s:' "${array_ids[@]}"
+        array_dependency=${array_dependency%:}
         resource_args report
         record_submit report "${common[@]}" "${args[@]}" --job-name=ctxmgr-clm-report \
-            --dependency="afterany:$array_id" --kill-on-invalid-dep=yes \
+            --dependency="afterany:$array_dependency" --kill-on-invalid-dep=yes \
             --output="$suite/logs/clm-report-%j.out" "$worker" report "$suite"
         printf 'release-requested:%s\n' "$setup_id" > "$suite/submission/state"
         if ! scontrol release "$setup_id"; then
             fail "Could not confirm release of setup job $setup_id. All job IDs are recorded; inspect status before releasing or resubmitting."
         fi
         printf 'submitted\n' > "$suite/submission/state"
-        printf '\nSubmitted 240 episodes in 20 GPU tasks (parallel limit: %s).\n' "$CLM_PARALLEL"
+        printf '\nSubmitted 240 episodes in 20 GPU tasks across five model arrays (per-model parallel limit: %s).\n' "$CLM_PARALLEL"
         printf 'Suite: %s\nStatus: bash %q status %q\n' "$suite" "$package_root/scripts/clm_vllm.sh" "$suite"
         printf 'Original experiment directories are unchanged.\n'
         ;;

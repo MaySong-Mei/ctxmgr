@@ -25,6 +25,25 @@ def blank_rows(root):
 
 
 class SuiteGridTests(unittest.TestCase):
+    def test_gpu_allocation_checks_model_specific_hardware(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "CLM_GPU_4B_PARTITION": "gpu",
+                "CLM_GPU_4B_TYPE": "rtx_5000_ada",
+                "CLM_GPU_4B_MEM": "64G",
+            },
+        ):
+            self.assertEqual(
+                suite_module.gpu_allocation("4B"),
+                {"partition": "gpu", "type": "rtx_5000_ada", "host_memory": "64G"},
+            )
+        observed = "name, memory.total [MiB], driver_version\nNVIDIA RTX 5000 Ada Generation, 32760 MiB, 580.1\n"
+        self.assertTrue(suite_module.gpu_name_matches(observed, "rtx_5000_ada"))
+        self.assertFalse(suite_module.gpu_name_matches(observed, "h200"))
+        with self.assertRaisesRegex(ValueError, "Unknown GPU type"):
+            suite_module.gpu_name_matches(observed, "invented")
+
     def test_full_grid_has_240_distinct_episodes_and_48_for_each_model(self):
         cells = suite_module.cells("/tmp/suite")
         rows = suite_module.expected_rows("/tmp/suite")
@@ -217,6 +236,13 @@ class SuiteReportTests(unittest.TestCase):
             "backend": "vllm",
             "server_version": "0.30.0",
             "precision": "bfloat16",
+            "gpu_allocations": {
+                "0.8B": {"partition": "gpu", "type": "a5000", "host_memory": "48G"},
+                "2B": {"partition": "gpu", "type": "a5000", "host_memory": "48G"},
+                "4B": {"partition": "gpu", "type": "rtx_5000_ada", "host_memory": "64G"},
+                "9B": {"partition": "gpu", "type": "a40", "host_memory": "96G"},
+                "27B": {"partition": "gpu_h200", "type": "h200", "host_memory": "128G"},
+            },
             "upstream": {},
             "image_sha256": "image",
             "source_manifest_sha256": "source",

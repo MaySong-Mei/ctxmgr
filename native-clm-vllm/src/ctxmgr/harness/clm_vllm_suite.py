@@ -34,6 +34,32 @@ LEVELS = (
 CONDITIONS = ("none", "clm_self")
 TRANSPORT = "reasoning-alias-v1"
 SAMPLING = {"temperature": 0.7, "top_p": 0.95, "max_tokens": 8192, "enable_thinking": True}
+GPU_NAME_MARKERS = {
+    "a5000": "RTX A5000",
+    "rtx_5000_ada": "RTX 5000 Ada",
+    "a40": "A40",
+    "l40s": "L40S",
+    "h100": "H100",
+    "h200": "H200",
+    "rtx_pro_6000_blackwell": "RTX PRO 6000",
+}
+
+
+def gpu_allocation(size):
+    suffix = size.replace(".", "")
+    return {
+        "partition": os.environ[f"CLM_GPU_{suffix}_PARTITION"],
+        "type": os.environ[f"CLM_GPU_{suffix}_TYPE"],
+        "host_memory": os.environ[f"CLM_GPU_{suffix}_MEM"],
+    }
+
+
+def gpu_name_matches(gpu_csv, expected_type):
+    """Check the actual GPU name, not a driver version or the CSV heading."""
+    marker = GPU_NAME_MARKERS.get(expected_type)
+    if marker is None:
+        raise ValueError(f"Unknown GPU type in frozen allocation: {expected_type}")
+    return any(marker.lower() in line.split(",", 1)[0].lower() for line in gpu_csv.splitlines()[1:])
 
 
 def now():
@@ -141,6 +167,7 @@ def setup(suite):
         "backend": "vllm",
         "server_version": installed_version,
         "precision": "bfloat16",
+        "gpu_allocations": {size: gpu_allocation(size) for size in MODEL_SIZES},
         "served_max_len": 81920,
         "upstream": verified,
         "source_manifest_sha256": sha256(suite / "source.sha256"),
@@ -166,6 +193,7 @@ def validate_ready(suite, *, verify_image=False):
         "sampling": SAMPLING,
         "backend": "vllm",
         "precision": "bfloat16",
+        "gpu_allocations": {size: gpu_allocation(size) for size in MODEL_SIZES},
         "server_version": "0.30.0",
         "client_transport": TRANSPORT,
         "served_max_len": 81920,
@@ -363,8 +391,9 @@ def cell(suite, index):
             text=True,
         )
         (root / "gpu.txt").write_text(gpu)
-        if "H200" not in gpu:
-            raise ValueError("This fixed BF16 experiment requires an H200 GPU")
+        allocation = gpu_allocation(selection["size"])
+        if not gpu_name_matches(gpu, allocation["type"]):
+            raise ValueError(f"Expected {allocation['type']} for {selection['size']}; observed {gpu!r}")
         write_json(
             root / "server-config.json",
             {
@@ -372,6 +401,7 @@ def cell(suite, index):
                 "backend": "vllm",
                 "version": version,
                 "precision": "bfloat16",
+                "gpu_allocation": allocation,
                 "client_transport": TRANSPORT,
                 "server_seed": 0,
                 "request_seed": None,
@@ -610,7 +640,8 @@ def render_report(rows, comparison, status):
         ),
         "",
         (
-            "vLLM 0.30.0; BF16; one H200 per cell; served context 81920; one concurrent sequence. "
+            "vLLM 0.30.0; BF16; one size-matched GPU per cell (see provenance); "
+            "served context 81920; one concurrent sequence. "
             "Official CLM sampling: thinking enabled, temperature 0.7, top_p 0.95, max_tokens 8192. "
             "Model generation defaults are disabled with `--generation-config vllm`. "
             "The server seed is 0; task seeds are not sent as inference seeds."
@@ -686,6 +717,11 @@ def render_report(rows, comparison, status):
             "Every comparison uses matching graded task-seed pairs. Seeds share task structure; "
             "no independent-replicate confidence interval or significance test is inferred. "
             "Inspect per-seed scores and termination counts before making claims."
+        ),
+        (
+            "GPU hardware differs by model size; cross-size wall time, throughput and GPU-cost "
+            "comparisons must account for the recorded allocation. BF16 precision and generation "
+            "settings remain fixed across sizes."
         ),
         "",
         (
@@ -865,6 +901,7 @@ def report(suite):
             "backend": ready["backend"],
             "server_version": ready["server_version"],
             "precision": ready["precision"],
+            "gpu_allocations": ready["gpu_allocations"],
             "client_transport": TRANSPORT,
             "upstream": ready["upstream"],
             "team_source_commit": shared["team_source_commit"],
