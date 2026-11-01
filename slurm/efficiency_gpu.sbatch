@@ -29,6 +29,9 @@ uv sync --locked --group serve --quiet
 read -r actor_port manager_port <<< "$(free_ports 2)"
 startup=$(date +%s)
 export PROMPT_TOKENS_DETAILS=1
+# Per-episode prefix-cache resets use POST /reset_prefix_cache, which vLLM 0.30 registers only in
+# dev mode. Servers bind 127.0.0.1, so the dev routes are reachable only from inside this job.
+export VLLM_SERVER_DEV_MODE=1
 if [[ "$ACTOR_SIZE" != 27B ]]; then
     manager_path=$(bash slurm/efficiency_models.sh 27B)
     start_server "$manager_path" "$manager_port" 0.55 81920 "$RUNS/manager.log" \
@@ -46,6 +49,10 @@ start_server "$actor_path" "$actor_port" "$actor_util" 81920 "$RUNS/actor.log" \
 pids+=("$SERVER_PID")
 wait_healthy "$actor_port" "$SERVER_PID" "$RUNS/actor.log"
 check_model "$actor_port" "Qwen/Qwen3.5-${ACTOR_SIZE}"
+# Fail fast if cache resets are unavailable, before any episode runs.
+for port in "$actor_port" ${manager_path:+"$manager_port"}; do
+    curl -sf -X POST "http://127.0.0.1:${port}/reset_prefix_cache" >/dev/null
+done
 printf '{"startup_s":%s,"gpus":1,"actor_size":"%s","mode":"%s"}\n' \
     "$(( $(date +%s) - startup ))" "$ACTOR_SIZE" "$MODE" > "$RUNS/job-metadata.json"
 extra=()

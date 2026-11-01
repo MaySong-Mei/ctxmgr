@@ -62,7 +62,7 @@ def main():
                 conditions = ["none_r", "self_arc", "mask_arc"]
                 if args.actor != "27B":
                     conditions.append("peer_27b_arc")
-            random.Random(seed + family).shuffle(conditions)
+            random.Random(f"{family}:{seed}").shuffle(conditions)
             for cond in conditions:
                 for url in set(
                     [args.base_url, args.manager_url] if args.manager_url else [args.base_url]
