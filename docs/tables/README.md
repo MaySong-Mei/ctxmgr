@@ -45,6 +45,9 @@ Other tables:
   31558632-31558635): success, kept, freed, parse errors and caps per manager × decoding × wording ×
   first / later event (`scripts/manager_replay.py summarize` on the harness branch
   `may/manager-replay`; design in `docs/preregistration-v5.md`).
+- `manager_replay_ablation.md`: round-33 `para3` ablation on the same 48 contexts (jobs 31571897,
+  31571899): v8, `para3`, `p3flat`, `p3bullets`, `v8steps` for the Gemma 12B (greedy + sampled) and
+  the Qwen 27B (greedy); design in `docs/preregistration-v6.md`.
 - `replay_probe.md`: round-30 replay probe (job 31513325) of the 27B actor's output-cap loop, per
   arm and probe point (`scripts/replay_probe.py summarize` on the harness branch; design in
   `docs/preregistration-v3.md`).

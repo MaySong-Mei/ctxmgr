@@ -790,6 +790,13 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   step block). S1 (procedure necessary) and S2 (sufficient) on the 12B's sampled later-event success.
   - 31571897 `r33-abl-g12` (Gemma 12B, greedy + 4 sampled, 1,200 calls), 31571899 `r33-abl-q27`
     (Qwen 27B, greedy, 240 calls). Output `runs/mreplay-<job>/replay.jsonl`.
+  - Both done (22 / 13 min, exit 0, rebuild check passed, 1,200 / 240 rows). Precondition met:
+    12B greedy later `para3` 0.66, v8 0.03 (round 32: 0.66 / 0.06; 23 of 32 `para3` replies
+    identical). 12B sampled later success: v8 0.09, `para3` 0.35, `p3flat` 0.29, `p3bullets` 0.37,
+    `v8steps` 0.05. **S1 inconclusive** (+0.06, contexts +11/−5, p = 0.21); **S2 falsified** (−0.04).
+    The 12B notes in 52-59 of 128 sampled later replies under the `para3` texts and in 3-8 under the
+    v8 texts. Qwen 27B greedy later: v8 0.56, `para3` 0.75, `p3flat` 0.75, `p3bullets` 0.69,
+    `v8steps` 0.88. Table `docs/tables/manager_replay_ablation.md`; `results.md` finding 11.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor

@@ -107,7 +107,8 @@ points are in "Limits" at the end.
    - v2: two falsified by the 27B actor's output-cap loop;
    - v3 (a replay probe of that loop): one falsified;
    - v4 (the Gemma 4 ladder): all five confirmed;
-   - v5 (identical-input manager replay): two confirmed, one falsified.
+   - v5 (identical-input manager replay): two confirmed, one falsified;
+   - v6 (`para3` ablation): one inconclusive, one falsified.
 
    Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
    and two held-out levels: 7 confirmed, 3 inconclusive, 0 falsified
@@ -174,6 +175,13 @@ points are in "Limits" at the end.
    - **R3 falsified:** the Qwen 27B succeeds in only 0.67 / 0.50 / 0.38 of all 48 contexts under v8,
      `para1` and `para4` (registered floor 0.70). The Qwen 9B succeeds in 0.00 under every wording.
      The Gemma 31B ranges from 0.71 to 0.92.
+
+   Pre-registration v6 (`docs/preregistration-v6.md`, round 33; finding 11) ablated `para3` on the
+   same contexts. The in-job controls reproduce round 32 (12B greedy later-event success: `para3`
+   0.66, v8 0.03).
+   - **S1 inconclusive:** with the steps rewritten as prose, the 12B's sampled later-event success
+     drops by only 0.06 (0.35 → 0.29; 11 contexts better, 5 worse; sign p = 0.21).
+   - **S2 falsified:** adding `para3`'s step block to v8 does not help the 12B (0.05 vs 0.09).
 
 7. **Manager-size ladder: without thinking only the 27B manager helps, under seven prompt wordings;
    with thinking both 9B and 27B help, and 27B stays ahead.** Needle, greedy, 8 seeds, `none` rerun
@@ -392,6 +400,23 @@ points are in "Limits" at the end.
     - **Measurement.** 3 of the 32 later contexts contain the 2B actor's output-cap loop, whose
       replies repeat made-up needle ids. A gold-only count (ids outside actor replies) changes no
       verdict (deviation D2).
+    - **What in `para3` helps the 12B: not the numbered procedure** (round 33,
+      `docs/tables/manager_replay_ablation.md`). Sampled later-event success, 128 replies each:
+
+      | v8 | `para3` | `p3flat` (steps as prose) | `p3bullets` (no numbers) | `v8steps` (v8 + steps) |
+      |---|---|---|---|---|
+      | 0.09 | 0.35 | 0.29 | 0.37 | 0.05 |
+
+      - **What predicts success is which body text the 12B reads.** It notes before deleting in 52-59
+        of 128 sampled later replies under the three `para3` texts, and in 3-8 under the two v8
+        texts. Under v8 it mostly deletes without notes or rewrites blocks with `replace`.
+      - **Numbering and the step list are not what helps.** Bullets equal numbers. Prose costs a
+        little but not significantly. The steps appended to v8 add nothing.
+      - **The Qwen 27B is different (exploratory, greedy, 32 replies).** The step block lifts it from
+        0.56 to 0.88 on later events, and as prose it scores 0.75, like `para3`.
+      - **So the 12B's gain comes from `para3`'s own text, not its format.** That text is its framing
+        (the job is to keep the assistant able to work) and how it states the copy-then-delete rule.
+        Which sentence carries it is not resolved.
 
 ## Limits
 
