@@ -19,9 +19,15 @@ from ctxmgr.harness.agents import NoManagementAgent, PeerManagedAgent, Sampling,
 from ctxmgr.harness.episode import _repo_commit
 
 DATA_SHA256 = "4e9ecb5c8d3b719f624d66b60f8d56bf227f03914f5f0753d6fa1b359d7104ea"
+# The official CMU host no longer resolves (setup job 31049986). The Internet Archive snapshot
+# serves the original bytes and matches DATA_SHA256; a Hugging Face mirror was dropped because it
+# is a re-indented copy whose bytes never match. Any source is accepted only for identical bytes.
 SOURCES = [
-    "https://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_distractor_v1.json",
-    "https://huggingface.co/datasets/namlh2004/hotpotqa/resolve/main/hotpot_dev_distractor_v1.json",
+    "http://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_distractor_v1.json",
+    (
+        "https://web.archive.org/web/20221010195146id_/"
+        "http://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_distractor_v1.json"
+    ),
 ]
 
 
@@ -41,7 +47,7 @@ def load_data(path):
                 )
                 break
             except (OSError, ValueError) as exc:
-                errors.append(str(exc))
+                errors.append(f"{url}: {exc}")
         else:
             raise RuntimeError(str(errors))
     if hashlib.sha256(path.read_bytes()).hexdigest() != DATA_SHA256:

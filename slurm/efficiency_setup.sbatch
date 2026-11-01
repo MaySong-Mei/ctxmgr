@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=ctx-eff-setup
-#SBATCH --partition=education
+#SBATCH --partition=day
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=02:00:00
