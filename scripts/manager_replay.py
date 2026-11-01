@@ -73,11 +73,33 @@ def _ablations():
     # Only the markers change; the step lines keep para3's own wrapping.
     bullets = [re.sub(r"^\d\. ", "-  ", line) for line in block]
     v8_head, v8_last = management.EDIT_INSTRUCTIONS.rsplit("\n", 1)
-    return {
+    out = {
         "p3flat": "\n".join([*head, textwrap.fill(prose, 100), *tail]),
         "p3bullets": "\n".join([*head, *bullets, *tail]),
         "v8steps": "\n".join([v8_head, *block, v8_last]),
     }
+    # Sentence-level ablations (docs/preregistration-v7.md). The head is two sentences: the situation,
+    # then the framing ("Your job is ...; you are judged on the second part ...").
+    situation, framing = " ".join(head).split(" Your job is ", 1)
+    assert framing.endswith("not on the amount of space freed.")
+    out["p3noframe"] = "\n".join([situation, block[0], *block[1:], *tail])
+    # Leave one step out; the remaining steps keep their lines and are renumbered.
+    groups = []
+    for line in block[1:]:
+        if re.match(r"^\d\. ", line):
+            groups.append([line])
+        else:
+            groups[-1].append(line)
+    for k in range(1, len(groups) + 1):
+        kept = [g for i, g in enumerate(groups, 1) if i != k]
+        lines = [re.sub(r"^\d\. ", f"{n}. ", g[0]) if j == 0 else g[j]
+                 for n, g in enumerate(kept, 1) for j in range(len(g))]  # fmt: skip
+        out[f"p3nostep{k}"] = "\n".join([*head, block[0], *lines, *tail])
+    # v8 with its three-line opening replaced by para3's three-line opening.
+    v8_lines = management.EDIT_INSTRUCTIONS.split("\n")
+    assert v8_lines[2] == "much space you free."
+    out["v8p3frame"] = "\n".join([*head, *v8_lines[3:]])
+    return out
 
 
 ABLATIONS = _ablations()
@@ -168,7 +190,7 @@ def score(ctx, reply):
     }
 
 
-def jobs(src, sampled, wordings=WORDINGS, sampled_wordings=SAMPLED_WORDINGS):
+def jobs(src, sampled, wordings=WORDINGS, sampled_wordings=SAMPLED_WORDINGS, n_samples=N_SAMPLES):
     out = []
     for level, seed, k, ctx, wall, _ in contexts(src):
         base = {"level": level, "seed": seed, "event": k}
@@ -178,7 +200,7 @@ def jobs(src, sampled, wordings=WORDINGS, sampled_wordings=SAMPLED_WORDINGS):
                         ctx, request(ctx, w, wall), kw))  # fmt: skip
         if sampled:
             for w in sampled_wordings:
-                for s in range(N_SAMPLES):
+                for s in range(n_samples):
                     kw = Sampling().request_kwargs(max_tokens=MANAGER_MAX_TOKENS, thinking=False)
                     kw.update(temperature=GEMMA_SAMPLING["temperature"],
                               top_p=GEMMA_SAMPLING["top_p"], seed=s)  # fmt: skip
@@ -188,7 +210,7 @@ def jobs(src, sampled, wordings=WORDINGS, sampled_wordings=SAMPLED_WORDINGS):
     return out
 
 
-def run(src, out_path, base_url, model, sampled, workers, wordings, sampled_wordings):
+def run(src, out_path, base_url, model, sampled, workers, wordings, sampled_wordings, n_samples):
     bad = [(lv, s, k, p) for lv, s, k, _, _, p in contexts(src) if p]
     if bad:
         print("rebuild check failed:", bad[:5])
@@ -204,7 +226,7 @@ def run(src, out_path, base_url, model, sampled, workers, wordings, sampled_word
                 "reply": reply}  # fmt: skip
 
     with open(out_path, "w", encoding="utf-8") as out, ThreadPoolExecutor(workers) as pool:
-        for rec in pool.map(one, jobs(src, sampled, wordings, sampled_wordings)):
+        for rec in pool.map(one, jobs(src, sampled, wordings, sampled_wordings, n_samples)):
             out.write(json.dumps(rec) + "\n")
             out.flush()
     return 0
@@ -247,6 +269,7 @@ def main():
     c.add_argument("--workers", type=int, default=32)
     c.add_argument("--wordings", type=parse_wordings, default=WORDINGS, help="comma list")
     c.add_argument("--sampled-wordings", type=parse_wordings, default=SAMPLED_WORDINGS)
+    c.add_argument("--samples", type=int, default=N_SAMPLES, help="sampled replies per context")
     sub.add_parser("texts").add_argument("wording", nargs="*")
     sub.add_parser("summarize").add_argument("out", type=Path, nargs="+")
     args = p.parse_args()
@@ -262,7 +285,7 @@ def main():
         return 1 if any(x[5] for x in ctxs) else 0
     if args.cmd == "run":
         return run(args.src, args.out, args.base_url, args.model, args.sampled, args.workers,
-                   args.wordings, args.sampled_wordings)  # fmt: skip
+                   args.wordings, args.sampled_wordings, args.samples)  # fmt: skip
     summarize(args.out)
     return 0
 

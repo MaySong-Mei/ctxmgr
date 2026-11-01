@@ -22,6 +22,7 @@ SAMPLED="${SAMPLED:-}"
 # Comma lists (scripts/manager_replay.py --wordings / --sampled-wordings); empty = the script default.
 WORDINGS="${WORDINGS:-}"
 SAMPLED_WORDINGS="${SAMPLED_WORDINGS:-}"
+SAMPLES="${SAMPLES:-}"  # sampled replies per context; empty = the script default (4)
 MAX_LEN="${MAX_LEN:-81920}"
 GPU_UTIL="${GPU_UTIL:-0.90}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-64}"
@@ -30,7 +31,7 @@ J="${SLURM_JOB_ID}"
 OUT="${PROJECT_DIR}/runs/mreplay-${J}"
 
 echo "host=$(hostname) job=${J} model=${MODEL} src=${SRC} sampled=${SAMPLED:-0} max_len=${MAX_LEN}"
-echo "wordings=${WORDINGS:-default} sampled_wordings=${SAMPLED_WORDINGS:-default}"
+echo "wordings=${WORDINGS:-default} sampled_wordings=${SAMPLED_WORDINGS:-default} samples=${SAMPLES:-default}"
 echo "commit=$(git rev-parse --short HEAD) out=${OUT}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
@@ -45,7 +46,8 @@ if ! { wait_healthy "${PORT}" "${SERVER_PID}" "${log}" && check_model "${PORT}" 
 fi
 uv run python scripts/manager_replay.py run "${SRC}" "${OUT}/replay.jsonl" \
     --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}" ${SAMPLED:+--sampled} \
-    ${WORDINGS:+--wordings "${WORDINGS}"} ${SAMPLED_WORDINGS:+--sampled-wordings "${SAMPLED_WORDINGS}"}
+    ${WORDINGS:+--wordings "${WORDINGS}"} ${SAMPLED_WORDINGS:+--sampled-wordings "${SAMPLED_WORDINGS}"} \
+    ${SAMPLES:+--samples "${SAMPLES}"}
 status=$?
 gpu_mem
 stop_server "${SERVER_PID}"
