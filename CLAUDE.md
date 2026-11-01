@@ -802,6 +802,12 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
   only, greedy + 8 sampled replies per context. Wordings: v8, `para3` (controls), `p3noframe`,
   `p3nostep1`-`p3nostep5`, `v8p3frame` (3,888 calls). T1-T3.
   - 31576318 `r34-sent-g12`. Output `runs/mreplay-31576318/replay.jsonl`.
+  - Done in 61 min (exit 0, rebuild check passed, 3,888 rows). Precondition met (sampled later
+    `para3` 0.38, v8 0.09). Sampled later success (notes of 256): `para3` 0.38 (118), −framing 0.28
+    (99), −step1 0.28 (69), −step2 0.21 (100), −step3 0.40 (127), −step4 0.18 (35), −step5 0.27 (87),
+    v8 0.09 (2), `v8p3frame` 0.17 (15). **T1 confirmed** (−step2: +0.17, Holm p = 0.009); **T2
+    inconclusive** (−step4: +0.20, p = 0.023, Holm p = 0.11); **T3 inconclusive** (+0.07, p = 0.03).
+    Table `docs/tables/manager_replay_sentences.md`; `results.md` findings 6 and 11.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor

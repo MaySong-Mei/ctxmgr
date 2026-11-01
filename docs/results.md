@@ -108,7 +108,8 @@ points are in "Limits" at the end.
    - v3 (a replay probe of that loop): one falsified;
    - v4 (the Gemma 4 ladder): all five confirmed;
    - v5 (identical-input manager replay): two confirmed, one falsified;
-   - v6 (`para3` ablation): one inconclusive, one falsified.
+   - v6 (`para3` ablation): one inconclusive, one falsified;
+   - v7 (sentence-level `para3` ablation): one confirmed, two inconclusive.
 
    Ten predictions were committed (`docs/preregistration.md`, tag `prereg-v1`) before new seeds (50–65)
    and two held-out levels: 7 confirmed, 3 inconclusive, 0 falsified
@@ -182,6 +183,17 @@ points are in "Limits" at the end.
    - **S1 inconclusive:** with the steps rewritten as prose, the 12B's sampled later-event success
      drops by only 0.06 (0.35 → 0.29; 11 contexts better, 5 worse; sign p = 0.21).
    - **S2 falsified:** adding `para3`'s step block to v8 does not help the 12B (0.05 vs 0.09).
+
+   Pre-registration v7 (`docs/preregistration-v7.md`, round 34; finding 11) removed one part of `para3`
+   at a time. The in-job controls reproduce round 33 (sampled later-event success: `para3` 0.38, v8
+   0.09). The six removals are Holm-adjusted together.
+   - **T1 confirmed:** without step 2 ("go through the other blocks; for each, delete it or keep only
+     the needed lines by replacing, or note them and delete"), success drops by 0.17 (20 contexts
+     worse, 4 better; Holm p = 0.009).
+   - **T2 inconclusive:** without step 4 ("note the needed lines in this same reply, every reply"),
+     success drops by 0.20 (18 worse, 6 better; p = 0.023, Holm p = 0.11).
+   - **T3 inconclusive:** `para3`'s opening in v8 adds 0.07 (14 better, 4 worse; p = 0.03), below
+     the +0.15 threshold.
 
 7. **Manager-size ladder: without thinking only the 27B manager helps, under seven prompt wordings;
    with thinking both 9B and 27B help, and 27B stays ahead.** Needle, greedy, 8 seeds, `none` rerun
@@ -414,9 +426,29 @@ points are in "Limits" at the end.
         little but not significantly. The steps appended to v8 add nothing.
       - **The Qwen 27B is different (exploratory, greedy, 32 replies).** The step block lifts it from
         0.56 to 0.88 on later events, and as prose it scores 0.75, like `para3`.
-      - **So the 12B's gain comes from `para3`'s own text, not its format.** That text is its framing
-        (the job is to keep the assistant able to work) and how it states the copy-then-delete rule.
-        Which sentence carries it is not resolved.
+      - **So the 12B's gain comes from `para3`'s own text, not its format.**
+    - **Which parts of `para3` the 12B needs** (round 34, 8 sampled replies per context,
+      `docs/tables/manager_replay_sentences.md`). Sampled later-event success, with the replies that
+      note in brackets (of 256):
+
+      | `para3` | − framing | − step 1 | − step 2 | − step 3 | − step 4 | − step 5 | v8 | v8 + `para3` opening |
+      |---|---|---|---|---|---|---|---|---|
+      | 0.38 (118) | 0.28 (99) | 0.28 (69) | 0.21 (100) | 0.40 (127) | 0.18 (35) | 0.27 (87) | 0.09 (2) | 0.17 (15) |
+
+      - **Two steps carry most of the effect, by two routes.**
+        - Without step 4 ("note in this same reply, every reply"), the 12B notes in 35 replies instead
+          of 118 and mostly loses needles (104 of 256).
+        - Without step 2 (judge each block: delete, or keep only the needed lines), it still notes (100)
+          but frees too little or writes invalid JSON.
+        - Neither step's content is new: v8 says both, in its rule bullets and its notes paragraph. Yet
+          under v8 the 12B notes in 2 of 256 replies.
+      - **Some parts do not matter.** Step 3 (never delete the only copy) can go (0.40), and so can the
+        framing sentence (0.28 sampled, n.s.; 0.66 greedy vs 0.62).
+      - **The opening alone transfers little.** v8 with `para3`'s opening lifts the 12B from 0.09 to
+        0.17.
+      - **So the gain is distributed over `para3`'s instruction steps,** chiefly the per-block decision
+        and the explicit note-in-this-reply step. The same content stated as v8's rules does not reach
+        the 12B. No single sentence turns v8 into `para3`.
 
 ## Limits
 
