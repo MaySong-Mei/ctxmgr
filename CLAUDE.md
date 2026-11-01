@@ -784,6 +784,12 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     little.
   - Post-hoc gold-only measure (actor-loop replies carry made-up needle ids in 3 of 32 later
     contexts) changes no verdict: deviation D2.
+- Round 33 (submitted 2026-10-31, after `docs/preregistration-v6.md` was frozen in caaa938): `para3`
+  ablation on round 32's 48 fixed contexts, harness `may/manager-replay` da7578b. Wordings v8, `para3`
+  (in-job controls), `p3flat` (steps as prose), `p3bullets` (numbers → bullets), `v8steps` (v8 + the
+  step block). S1 (procedure necessary) and S2 (sufficient) on the 12B's sampled later-event success.
+  - 31571897 `r33-abl-g12` (Gemma 12B, greedy + 4 sampled, 1,200 calls), 31571899 `r33-abl-q27`
+    (Qwen 27B, greedy, 240 calls). Output `runs/mreplay-<job>/replay.jsonl`.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
