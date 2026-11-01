@@ -18,6 +18,10 @@ for size in 2B 4B 9B 27B; do
     test -r "$path/config.json"
     test -r "$path/tokenizer.json"
 done
-# Verify flags against installed vLLM, not assumptions about another version.
-uv run vllm serve --help > logs/vllm-help-${SLURM_JOB_ID}.txt
-grep -q enable-prompt-tokens-details logs/vllm-help-${SLURM_JOB_ID}.txt
+# Verify flags against installed vLLM, not assumptions about another version. `vllm serve --help`
+# cannot run here: it builds the engine config and fails to infer a device on a CPU node
+# (job 31564027). Read the installed server CLI definition instead; the GPU smoke exercises it.
+site=$(uv run python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+cli_args="$site/vllm/entrypoints/launchers/cli_args.py"
+grep -Eq '^\s+enable_prompt_tokens_details: bool' "$cli_args"
+uv run python -c "import importlib.metadata as m; print('vllm', m.version('vllm'))"
