@@ -797,6 +797,11 @@ Timeline: weeks 1–2 tasks + harness + pilot on 0.8B; weeks 3–5 core grid; we
     The 12B notes in 52-59 of 128 sampled later replies under the `para3` texts and in 3-8 under the
     v8 texts. Qwen 27B greedy later: v8 0.56, `para3` 0.75, `p3flat` 0.75, `p3bullets` 0.69,
     `v8steps` 0.88. Table `docs/tables/manager_replay_ablation.md`; `results.md` finding 11.
+- Round 34 (submitted 2026-10-31, after `docs/preregistration-v7.md` was frozen in 3624cfb):
+  sentence-level `para3` ablation, harness `may/manager-replay` 14b1a23, same 48 contexts, Gemma 12B
+  only, greedy + 8 sampled replies per context. Wordings: v8, `para3` (controls), `p3noframe`,
+  `p3nostep1`-`p3nostep5`, `v8p3frame` (3,888 calls). T1-T3.
+  - 31576318 `r34-sent-g12`. Output `runs/mreplay-31576318/replay.jsonl`.
 - Termination audit (2026-10-30, no GPU; `scripts/termination_audit.py` →
   `docs/tables/termination_needle.md`, after a literature scan and two adversarial reviews): 38/120
   managed 27B-actor Needle episodes end at `max_steps`, 22 in a cap loop; 100/120 have a capped actor
