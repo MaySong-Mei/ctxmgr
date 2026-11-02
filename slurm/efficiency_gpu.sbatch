@@ -32,16 +32,28 @@ export PROMPT_TOKENS_DETAILS=1
 # Per-episode prefix-cache resets use POST /reset_prefix_cache, which vLLM 0.30 registers only in
 # dev mode. Servers bind 127.0.0.1, so the dev routes are reachable only from inside this job.
 export VLLM_SERVER_DEV_MODE=1
-if [[ "$ACTOR_SIZE" != 27B ]]; then
-    manager_path=$(bash slurm/efficiency_models.sh 27B)
-    start_server "$manager_path" "$manager_port" 0.55 81920 "$RUNS/manager.log" \
-        --served-model-name Qwen/Qwen3.5-27B --max-num-seqs 64 --enable-prefix-caching
-    pids+=("$SERVER_PID")
-    wait_healthy "$manager_port" "$SERVER_PID" "$RUNS/manager.log"
-    check_model "$manager_port" Qwen/Qwen3.5-27B
+if [[ "$MODE" == flipped ]]; then
+    # Flipped roles: 27B actor, smaller manager (MANAGER_SIZE) on the same GPU.
+    : "${MANAGER_SIZE:?Set MANAGER_SIZE for MODE=flipped}"
+    [[ "$ACTOR_SIZE" == 27B ]] || { echo "MODE=flipped needs ACTOR_SIZE=27B" >&2; exit 1; }
+    manager_name="Qwen/Qwen3.5-${MANAGER_SIZE}"
+    manager_util=0.30
+    actor_util=0.58
+elif [[ "$ACTOR_SIZE" != 27B ]]; then
+    manager_name=Qwen/Qwen3.5-27B
+    manager_util=0.55
     actor_util=0.38
 else
+    manager_name=
     actor_util=0.90
+fi
+if [[ -n "$manager_name" ]]; then
+    manager_path=$(bash slurm/efficiency_models.sh "${manager_name#Qwen/Qwen3.5-}")
+    start_server "$manager_path" "$manager_port" "$manager_util" 81920 "$RUNS/manager.log" \
+        --served-model-name "$manager_name" --max-num-seqs 64 --enable-prefix-caching
+    pids+=("$SERVER_PID")
+    wait_healthy "$manager_port" "$SERVER_PID" "$RUNS/manager.log"
+    check_model "$manager_port" "$manager_name"
 fi
 actor_path=$(bash slurm/efficiency_models.sh "$ACTOR_SIZE")
 start_server "$actor_path" "$actor_port" "$actor_util" 81920 "$RUNS/actor.log" \
@@ -53,13 +65,21 @@ check_model "$actor_port" "Qwen/Qwen3.5-${ACTOR_SIZE}"
 for port in "$actor_port" ${manager_path:+"$manager_port"}; do
     curl -sf -X POST "http://127.0.0.1:${port}/reset_prefix_cache" >/dev/null
 done
-printf '{"startup_s":%s,"gpus":1,"actor_size":"%s","mode":"%s"}\n' \
-    "$(( $(date +%s) - startup ))" "$ACTOR_SIZE" "$MODE" > "$RUNS/job-metadata.json"
+printf '{"startup_s":%s,"gpus":1,"actor_size":"%s","mode":"%s","manager":"%s","actor_util":%s}\n' \
+    "$(( $(date +%s) - startup ))" "$ACTOR_SIZE" "$MODE" "${manager_name:-}" "$actor_util" \
+    > "$RUNS/job-metadata.json"
 extra=()
 qaextra=()
-if [[ "$ACTOR_SIZE" != 27B ]]; then
+if [[ -n "$manager_name" ]]; then
     extra+=(--manager-url "http://127.0.0.1:${manager_port}/v1")
-    qaextra+=(--manager-url "http://127.0.0.1:${manager_port}/v1" --manager-model Qwen/Qwen3.5-27B)
+    qaextra+=(--manager-url "http://127.0.0.1:${manager_port}/v1" --manager-model "$manager_name")
+fi
+if [[ "$MODE" == flipped ]]; then
+    extra+=(--flipped-manager "$MANAGER_SIZE")
+    # Short controls never reach the management trigger; the 27B short runs already exist.
+    qaextra+=(--lengths long)
+    conditions=(peer_small)
+elif [[ "$ACTOR_SIZE" != 27B ]]; then
     conditions=(none self peer_27b)
 else
     conditions=(none self peer_same)

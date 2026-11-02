@@ -31,3 +31,11 @@ Full pilot: 8 cases × 2 lengths × 3 conditions × 4 actor sizes = 192 QA episo
 `slurm/efficiency_submit.sh` submits setup, existing-log analysis, a 2B smoke, and four full GPU jobs with at most two of this experiment's full GPU jobs running concurrently. Full GPU jobs depend on smoke success. Setup/test failure blocks all dependent work. The submission manifest is append-only; the submit script refuses reuse of its manifest path. Work occurs in a dedicated project-directory checkout, leaving existing branches/runs untouched. GPU jobs use pinned, group-readable team model snapshots read-only; all generated artifacts/caches are in Ruthvik's course project/scratch paths.
 
 AI assistance: Codex prepared instrumentation, pilot scripts, tests and documentation; experimental claims still require human review.
+
+## Flipped roles: small manager, large actor (added 2026-11-01)
+
+Question: can a cheap model manage a large actor's context without losing accuracy? Comparison target is the 27B actor managing itself (`self`/`self_arc`), plus `none` and `peer_same`, from the 27B job of the first pilot.
+
+New conditions `peer_small` and `peer_small_arc` use the existing peer edit protocol with `--manager-model` set to a smaller Qwen3.5 (2B, 4B or 9B). `MODE=flipped` in `slurm/efficiency_gpu.sbatch` serves the 27B actor (0.58 of the H200) and the small manager (0.30) on one GPU, and runs Needle K4-C24 and KV R1000 at seeds 50–53 (8 episodes) plus the 8 QA cases at long length only (short controls never reach the management trigger). That makes 16 episodes per manager size, 48 in total. Submit with `slurm/efficiency_flipped_submit.sh`.
+
+Caveats: the 27B baselines ran with the actor alone at 0.90 GPU memory, so wall-clock comparisons are approximate. Compute comparisons use the same per-role nominal param-token accounting. Same previously seen instances; exploratory, 4 seeds or 8 cases per cell. The analysis groups by `manager_model` too, so manager sizes are never pooled.

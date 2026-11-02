@@ -25,10 +25,16 @@ def main():
     parser.add_argument("--manager-url")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument(
+        "--flipped-manager",
+        help="flipped roles: smaller manager size (e.g. 2B) for a 27B actor; runs peer_small only",
+    )
     args = parser.parse_args()
+    if args.flipped_manager and (args.actor != "27B" or not args.manager_url):
+        parser.error("--flipped-manager needs --actor 27B and --manager-url")
     seeds = [50] if args.smoke else [50, 51, 52, 53]
     levels = [("needle_retention", "K4-C24")]
-    if args.actor in ("9B", "27B") and not args.smoke:
+    if (args.actor in ("9B", "27B") and not args.smoke) or args.flipped_manager:
         levels.append(("kv_store", "R1000"))
     for family, level in levels:
         for seed in seeds:
@@ -62,13 +68,16 @@ def main():
                 conditions = ["none_r", "self_arc", "mask_arc"]
                 if args.actor != "27B":
                     conditions.append("peer_27b_arc")
+            if args.flipped_manager:
+                conditions = ["peer_small" if family == "needle_retention" else "peer_small_arc"]
             random.Random(f"{family}:{seed}").shuffle(conditions)
             for cond in conditions:
                 for url in set(
                     [args.base_url, args.manager_url] if args.manager_url else [args.base_url]
                 ):
                     reset(url)
-                out = args.out / f"Qwen3.5-{args.actor}" / cond / name
+                arm = f"{cond}-{args.flipped_manager}" if args.flipped_manager else cond
+                out = args.out / f"Qwen3.5-{args.actor}" / arm / name
                 command = [
                     sys.executable,
                     "-m",
@@ -94,12 +103,13 @@ def main():
                     "--max-turns-per-op",
                     "2",
                 ]
-                if cond.startswith("peer_27b"):
+                if cond.startswith(("peer_27b", "peer_small")):
+                    manager = args.flipped_manager if cond.startswith("peer_small") else "27B"
                     command += [
                         "--manager-base-url",
                         args.manager_url,
                         "--manager-model",
-                        "Qwen/Qwen3.5-27B",
+                        f"Qwen/Qwen3.5-{manager}",
                     ]
                 started = time.time()
                 subprocess.run(command, check=True)

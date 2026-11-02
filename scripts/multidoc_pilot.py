@@ -135,7 +135,7 @@ def run_case(item, dataset, args, condition, long):
     out.mkdir(parents=True)
     client = openai.OpenAI(base_url=args.base_url, api_key="EMPTY", timeout=600, max_retries=0)
     kwargs = {"client": client, "model": args.model, "sampling": Sampling(), "wall": 30720}
-    if condition == "peer_27b" or condition == "peer_same":
+    if condition.startswith("peer"):
         kwargs.update(
             manager_client=openai.OpenAI(
                 base_url=args.manager_url or args.base_url,

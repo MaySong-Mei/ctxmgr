@@ -102,7 +102,11 @@ class FakeClient:
 
 @pytest.mark.parametrize(
     "conditions,manager",
-    [(["none", "self", "peer_27b"], True), (["none", "self", "peer_same"], False)],
+    [
+        (["none", "self", "peer_27b"], True),
+        (["none", "self", "peer_same"], False),
+        (["peer_small"], True),
+    ],
 )
 def test_multidoc_runs_every_condition_and_length(tmp_path, monkeypatch, conditions, manager):
     pilot = load("multidoc_pilot")
@@ -140,4 +144,49 @@ def test_multidoc_runs_every_condition_and_length(tmp_path, monkeypatch, conditi
     assert all(r["terminated_by"] != "request_failed" for r in results), results
     managed = [r for r in long if r["condition"] != "none"]
     assert all(r["management_events"] > 0 for r in managed)
+    if manager:
+        peers = [r for r in results if r["condition"].startswith("peer")]
+        assert all(r["manager_model"] == "Qwen/Qwen3.5-27B" for r in peers)
+        assert all(r["manager_calls"] > 0 for r in peers if r["long_context"])
     assert len(resets) == len(results) * (2 if manager else 1)
+
+
+def test_grid_flipped_runs_small_manager_only(tmp_path, monkeypatch):
+    grid = load("efficiency_grid")
+    runs = []
+
+    def fake_run(command, check):
+        if "ctxmgr.harness" in command:
+            Path(command[command.index("--out") + 1]).mkdir(parents=True)
+            runs.append(command)
+
+    monkeypatch.setattr(grid.subprocess, "run", fake_run)
+    monkeypatch.setattr(grid, "reset", lambda url: None)
+    argv = ["efficiency_grid.py", "--actor", "27B", "--base-url", "http://a/v1"]
+    argv += ["--manager-url", "http://m/v1", "--out", str(tmp_path), "--flipped-manager", "4B"]
+    monkeypatch.setattr(sys, "argv", argv)
+    grid.main()
+    assert len(runs) == 8
+    conditions = sorted(c[c.index("--condition") + 1] for c in runs)
+    assert conditions == ["peer_small"] * 4 + ["peer_small_arc"] * 4
+    for command in runs:
+        assert command[command.index("--model") + 1] == "Qwen/Qwen3.5-27B"
+        assert command[command.index("--manager-model") + 1] == "Qwen/Qwen3.5-4B"
+        assert command[command.index("--manager-base-url") + 1] == "http://m/v1"
+        assert "-4B" in Path(command[command.index("--out") + 1]).parent.name
+
+
+def test_grid_flipped_requires_27b_actor(tmp_path, monkeypatch):
+    grid = load("efficiency_grid")
+    argv = ["efficiency_grid.py", "--actor", "9B", "--base-url", "http://a/v1"]
+    argv += ["--manager-url", "http://m/v1", "--out", str(tmp_path), "--flipped-manager", "2B"]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(SystemExit):
+        grid.main()
+
+
+def test_harness_accepts_flipped_conditions():
+    from ctxmgr.harness.__main__ import ARCHIVE_CONDITIONS, CONDITIONS
+
+    assert CONDITIONS["peer_small"] is CONDITIONS["peer_27b"]
+    assert "peer_small_arc" in ARCHIVE_CONDITIONS

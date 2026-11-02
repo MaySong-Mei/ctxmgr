@@ -21,15 +21,25 @@ CONDITIONS = {
     "self": SelfManagedAgent,
     "peer_same": PeerManagedAgent,
     "peer_27b": PeerManagedAgent,
+    # Flipped roles: a smaller model manages a larger actor's context (--manager-model required).
+    "peer_small": PeerManagedAgent,
     # Archive-with-recall arms: removed blocks go to an archive the actor can RECALL from.
     # `none_r` is `none` with the archive instructions (a prompt control; nothing is ever archived).
     "none_r": NoManagementAgent,
     "self_arc": SelfManagedAgent,
     "peer_same_arc": PeerManagedAgent,
     "peer_27b_arc": PeerManagedAgent,
+    "peer_small_arc": PeerManagedAgent,
     "mask_arc": MaskAgent,
 }
-ARCHIVE_CONDITIONS = {"none_r", "self_arc", "peer_same_arc", "peer_27b_arc", "mask_arc"}
+ARCHIVE_CONDITIONS = {
+    "none_r",
+    "self_arc",
+    "peer_same_arc",
+    "peer_27b_arc",
+    "peer_small_arc",
+    "mask_arc",
+}
 UNMANAGED = {"none", "none_r"}
 
 
@@ -77,7 +87,7 @@ def main():
         kwargs["trigger"] = args.trigger
         kwargs["manager_max_tokens"] = args.manager_max_tokens
     if args.condition.startswith("peer"):
-        if args.condition.startswith("peer_27b") and not args.manager_model:
+        if args.condition.startswith(("peer_27b", "peer_small")) and not args.manager_model:
             parser.error(f"{args.condition} needs --manager-model")
         manager_url = args.manager_base_url or args.base_url
         kwargs["manager_client"] = openai.OpenAI(
