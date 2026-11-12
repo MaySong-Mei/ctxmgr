@@ -93,7 +93,7 @@ class WhenHowTests(unittest.TestCase):
             skill="none",
             **kwargs,
         )
-        agent._cb_messages = conversation()
+        agent._live = conversation()
         return agent
 
     def run_async(self, coroutine):
@@ -101,6 +101,7 @@ class WhenHowTests(unittest.TestCase):
 
     def test_conversation_starts_above_trigger(self):
         agent = self.make(self.w.FixedTriggerStream)
+        self.assertEqual(agent.trigger_tokens, self.w.TRIGGER_TOKENS)
         self.assertGreater(agent._tokens(), self.w.TRIGGER_TOKENS)
 
     def test_fixed_trigger_opens_a_two_turn_window_and_blocks_edits_after(self):
@@ -110,10 +111,10 @@ class WhenHowTests(unittest.TestCase):
         env = FakeEnvironment()
         self.run_async(agent.before_iteration(env))
         self.assertTrue(agent._ctx.open)
-        self.assertIn("[HARNESS]", agent._cb_messages[-1]["content"])
+        self.assertIn("[HARNESS]", agent._live[-1]["content"])
         self.assertEqual(agent.events[0]["kind"], "harness_trigger")
 
-        messages = agent._cb_messages
+        messages = agent._live
         rendered = render_editable(messages, protect=2)
         record = {"edit": "none", "before": 0, "after": 0, "prefix": 0}
         note, changed = agent._ctx._apply_edit(
@@ -138,7 +139,7 @@ class WhenHowTests(unittest.TestCase):
 
     def test_fixed_trigger_waits_below_threshold(self):
         agent = self.make(self.w.FixedTriggerStream)
-        agent._cb_messages = conversation(filler=False)
+        agent._live = conversation(filler=False)
         self.run_async(agent.before_iteration(FakeEnvironment()))
         self.assertFalse(agent._ctx.open)
         self.assertEqual(agent.events, [])
@@ -149,7 +150,7 @@ class WhenHowTests(unittest.TestCase):
         replies = [response("Removing filler.", "python3 edit.py DELETE_FILLER"), response("DONE")]
         with patch.object(agent, "_manager_completion", AsyncMock(side_effect=replies)) as call:
             self.run_async(agent.before_iteration(env))
-        text = "".join(str(m.get("content")) for m in agent._cb_messages)
+        text = "".join(str(m.get("content")) for m in agent._live)
         self.assertNotIn(FILLER, text)
         self.assertIn("NEEDLE n1 keep me", text)
         event = agent.events[0]
@@ -173,7 +174,7 @@ class WhenHowTests(unittest.TestCase):
         from clm_harness.context_utils.context_string import render_editable
 
         agent = self.make(self.w.ManagedStream, manager_mode="fixed")
-        messages = agent._cb_messages
+        messages = agent._live
         rendered = render_editable(messages, protect=2)
         record = {"edit": "none", "before": 0, "after": 0, "prefix": 0}
         note, changed = agent._ctx._apply_edit(
@@ -184,12 +185,12 @@ class WhenHowTests(unittest.TestCase):
 
     def test_watching_manager_can_decline(self):
         agent = self.make(self.w.ManagedStream, manager_mode="watch")
-        agent._cb_messages = conversation(filler=False)
+        agent._live = conversation(filler=False)
         env = FakeEnvironment()
         with patch.object(agent, "_manager_completion", AsyncMock()) as idle:
             self.run_async(agent.before_iteration(env))  # records the starting size only
         idle.assert_not_awaited()
-        agent._cb_messages.append({"role": "user", "content": FILLER})
+        agent._live.append({"role": "user", "content": FILLER})
         with patch.object(
             agent, "_manager_completion", AsyncMock(return_value=response("NOT_NOW"))
         ):
@@ -198,7 +199,7 @@ class WhenHowTests(unittest.TestCase):
         self.assertEqual(
             (event["kind"], event["declined"], event["commands"]), ("manager_watch", True, 0)
         )
-        self.assertIn(FILLER, "".join(str(m.get("content")) for m in agent._cb_messages))
+        self.assertIn(FILLER, "".join(str(m.get("content")) for m in agent._live))
 
     def test_actor_request_marker_triggers_manager_once(self):
         from clm_contextbench import ClmStream

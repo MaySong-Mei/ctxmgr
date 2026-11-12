@@ -42,7 +42,8 @@ from clm_harness.utils import tokens as tk
 from clm_harness.utils.lm_compat import token_cap_key
 from clm_harness.utils.tool_schemas import BASH_TOOL
 
-TRIGGER_TOKENS = 18432  # 60% of the 30,720-token usable budget, as in the team grid.
+TRIGGER_FRACTION = 0.6  # Of the enforced budget: 18,432 of 30,720 on ContextBench.
+TRIGGER_TOKENS = 18432
 WINDOW_TURNS = 2  # The trigger turn and the one after it.
 REFIRE_GROWTH = 2048  # Re-trigger only after this much growth past the last attempt.
 WATCH_EVERY = 4096  # A watching manager looks after this much growth.
@@ -109,26 +110,24 @@ _MANAGEMENT_HEADING = "## Managing your context\n"
 _MIRROR_INTRO = "Your conversation is mirrored to "
 
 
-def _split_system(system: str) -> tuple[str, str, str]:
-    """(before the section, management section, the marker paragraph and after)."""
-    from contextbench.stream import MARKER_PARAGRAPH
-
-    if system.count(_MANAGEMENT_HEADING) != 1 or system.count(MARKER_PARAGRAPH) != 1:
+def _split_system(system: str, finish: str) -> tuple[str, str, str]:
+    """(before the section, management section, the finish paragraph and after)."""
+    if system.count(_MANAGEMENT_HEADING) != 1 or not finish or system.count(finish) != 1:
         raise ValueError("Unexpected official CLM system prompt; cannot locate management text")
     before, section = system.split(_MANAGEMENT_HEADING, 1)
-    management, after = section.split(MARKER_PARAGRAPH, 1)
-    return before + _MANAGEMENT_HEADING, management, MARKER_PARAGRAPH + after
+    management, after = section.split(finish, 1)
+    return before + _MANAGEMENT_HEADING, management, finish + after
 
 
-def _insert_before_marker(system: str, policy: str) -> str:
+def _insert_before_marker(system: str, policy: str, finish: str) -> str:
     """Keep the official management section and append a condition policy to it."""
-    head, management, tail = _split_system(system)
+    head, management, tail = _split_system(system, finish)
     return head + management + policy + tail
 
 
-def _replace_management(system: str, policy: str) -> str:
+def _replace_management(system: str, policy: str, finish: str) -> str:
     """Keep the shared goal/budget sentences; replace the self-editing instructions."""
-    head, management, tail = _split_system(system)
+    head, management, tail = _split_system(system, finish)
     if management.count(_MIRROR_INTRO) != 1:
         raise ValueError("Unexpected official CLM management section")
     common_goal = management.split(_MIRROR_INTRO, 1)[0]
@@ -172,17 +171,21 @@ def _gated_copy(old: ContextEnv, closed_note: str) -> GatedContextEnv:
     return new
 
 
-class _HookedStream(ClmStream):
-    """Adds one async hook before each loop iteration's budget check."""
+class WhenHowMixin:
+    """Adds one async hook before each loop iteration's budget check.
+
+    Mix in before ``ClmStream`` (ContextBench) or ``ClmAgent`` (general tasks).
+    """
 
     def __init__(self, *args: Any, closed_note: str, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._ctx = _gated_copy(self._ctx, closed_note)
         self._host_mirror = self._ctx.host_mirror
         self.events: list[dict[str, Any]] = []
+        self._live: list[dict[str, Any]] | None = None
 
     def _tokens(self) -> int:
-        return self._budget.count(self._cb_messages or [])
+        return self._budget.count(self._live or [])
 
     async def before_iteration(self, environment: Any) -> None:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -196,7 +199,8 @@ class _HookedStream(ClmStream):
         replay = self._resume.replay
 
         async def hooked(env: Any, messages: list[dict[str, Any]]) -> Any:
-            if self._cb_messages is not None and not self.cb_done:
+            self._live = messages
+            if not getattr(self, "cb_done", False):
                 await self.before_iteration(env)
             return await maybe(env, messages)
 
@@ -214,7 +218,8 @@ class _HookedStream(ClmStream):
         finally:
             self._ckpt.maybe = maybe
             self._resume.replay = replay
-            self._cb_record["whenhow"] = self.summary()
+            if hasattr(self, "_cb_record"):
+                self._cb_record["whenhow"] = self.summary()
             (self.logs_dir / "whenhow.json").write_text(
                 json.dumps({"summary": self.summary(), "events": self.events}, indent=2) + "\n"
             )
@@ -223,12 +228,16 @@ class _HookedStream(ClmStream):
         return {"n_events": len(self.events), "n_blocked_actor_edits": self._ctx.n_blocked}
 
 
-class FixedTriggerStream(_HookedStream):
+class FixedTriggerMixin(WhenHowMixin):
     """The actor edits, but only in a window the harness opens at a token trigger."""
 
-    def __init__(self, *args: Any, trigger_tokens: int = TRIGGER_TOKENS, **kwargs: Any):
+    def __init__(self, *args: Any, trigger_tokens: int | None = None, **kwargs: Any):
         super().__init__(*args, closed_note=_CLOSED_NOTE, **kwargs)
-        self.trigger_tokens = int(trigger_tokens)
+        self.trigger_tokens = (
+            int(trigger_tokens)
+            if trigger_tokens
+            else round(TRIGGER_FRACTION * self._budget.strict_target)
+        )
         self._window = 0
         self._next_fire = self.trigger_tokens
 
@@ -243,7 +252,7 @@ class FixedTriggerStream(_HookedStream):
             "the file are applied only in that turn and the next. Edits at other times "
             "are not applied.\n\n"
         )
-        return _insert_before_marker(system, policy)
+        return _insert_before_marker(system, policy, self.finish_policy.prompt_fragment())
 
     async def before_iteration(self, environment: Any) -> None:
         tokens = self._tokens()
@@ -259,7 +268,7 @@ class FixedTriggerStream(_HookedStream):
             self._window = WINDOW_TURNS
             self._ctx.open = True
             self.events.append({"kind": "harness_trigger", "tokens_before": tokens})
-            self._cb_messages.append(
+            self._live.append(
                 {
                     "role": "user",
                     "content": (
@@ -272,7 +281,7 @@ class FixedTriggerStream(_HookedStream):
             )
 
 
-class ManagedStream(_HookedStream):
+class ManagedMixin(WhenHowMixin):
     """A separate manager session edits the actor's mirrored context."""
 
     MODES = ("fixed", "request", "watch")
@@ -284,7 +293,7 @@ class ManagedStream(_HookedStream):
         manager_model: str | None = None,
         manager_api_base: str | None = None,
         manager_api_key: str | None = None,
-        trigger_tokens: int = TRIGGER_TOKENS,
+        trigger_tokens: int | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, closed_note=_MANAGED_NOTE, **kwargs)
@@ -294,7 +303,11 @@ class ManagedStream(_HookedStream):
         self.manager_model = manager_model or self.model_name
         self.manager_api_base = manager_api_base or self.api_base
         self.manager_api_key = manager_api_key or os.environ.get("CTXMGR_MANAGER_API_KEY")
-        self.trigger_tokens = int(trigger_tokens)
+        self.trigger_tokens = (
+            int(trigger_tokens)
+            if trigger_tokens
+            else round(TRIGGER_FRACTION * self._budget.strict_target)
+        )
         self._next_fire = self.trigger_tokens
         self._requested = False
         self._last_watch: int | None = None
@@ -318,7 +331,7 @@ class ManagedStream(_HookedStream):
                 f"`echo {REQUEST_MARKER}` in a command (it can share a command with other "
                 "steps via `&&`). The manager runs before your next turn.\n\n"
             )
-        return _replace_management(system, policy)
+        return _replace_management(system, policy, self.finish_policy.prompt_fragment())
 
     def summary(self) -> dict[str, Any]:
         calls = self.manager_calls
@@ -384,7 +397,7 @@ class ManagedStream(_HookedStream):
 
     async def manage(self, environment: Any, *, watch: bool, reason: str) -> int:
         """Run one manager session on the actor's live messages; return tokens after."""
-        actor = self._cb_messages
+        actor = self._live
         ctx = self._ctx
         before = self._tokens()
         rendered = await ctx.write_mirror(environment, actor)
@@ -477,3 +490,11 @@ def _usage(response: Any) -> dict[str, Any]:
 def render_for_tests(messages: list[dict[str, Any]], protect: int = 2) -> str:
     """Expose the mirror rendering used for managers, for unit tests."""
     return render_editable(messages, protect=protect)
+
+
+class FixedTriggerStream(FixedTriggerMixin, ClmStream):
+    """Harness-timed self-management on ContextBench."""
+
+
+class ManagedStream(ManagedMixin, ClmStream):
+    """Manager-edited context on ContextBench."""
