@@ -322,10 +322,11 @@ def cell(suite, index):
     from .clm_settings import resolve_settings
 
     suite = Path(suite).resolve()
-    if not 0 <= index < 16:
-        raise ValueError("Cell index must be in 0..15")
+    planned = cells(suite)
+    if not 0 <= index < len(planned):
+        raise ValueError(f"Cell index must be in 0..{len(planned) - 1}")
     ready = validate_ready(suite, verify_image=True)
-    selection = cells(suite)[index]
+    selection = planned[index]
     root = Path(selection["root"])
     root.mkdir(parents=True, exist_ok=False)
     status = {
@@ -393,7 +394,9 @@ def cell(suite, index):
         (root / "gpu.txt").write_text(gpu)
         allocation = gpu_allocation(selection["size"])
         if not gpu_name_matches(gpu, allocation["type"]):
-            raise ValueError(f"Expected {allocation['type']} for {selection['size']}; observed {gpu!r}")
+            raise ValueError(
+                f"Expected {allocation['type']} for {selection['size']}; observed {gpu!r}"
+            )
         write_json(
             root / "server-config.json",
             {

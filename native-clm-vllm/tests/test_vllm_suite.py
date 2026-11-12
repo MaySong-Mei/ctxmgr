@@ -55,6 +55,20 @@ class SuiteGridTests(unittest.TestCase):
         for cell in cells:
             self.assertEqual(sum(row["cell"] == cell["index"] for row in rows), 12)
 
+    def test_every_planned_cell_index_is_accepted_including_27b(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            planned = suite_module.cells(tmp)
+            self.assertEqual(len(planned), 20)
+            self.assertEqual({cell["size"] for cell in planned[16:]}, {"27B"})
+            with self.assertRaisesRegex(ValueError, r"0\.\.19"):
+                suite_module.cell(tmp, 20)
+            # Index 16 (27B) passes the bound and fails only at readiness checks.
+            with (
+                patch.object(suite_module, "validate_ready", side_effect=RuntimeError("ready")),
+                self.assertRaisesRegex(RuntimeError, "ready"),
+            ):
+                suite_module.cell(tmp, 16)
+
     def test_comparisons_use_only_matching_valid_seed_pairs(self):
         rows = blank_rows("/tmp/suite")
         model = "Qwen3.5-0.8B-BF16"

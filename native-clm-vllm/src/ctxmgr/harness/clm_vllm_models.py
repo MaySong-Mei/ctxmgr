@@ -106,9 +106,18 @@ def _safe_artifact(snapshot: Path, name: str) -> Path:
         raise ValueError(f"Missing model artifact: {name}")
     resolved = artifact.resolve(strict=True)
     blobs = snapshot.parent.parent / "blobs"
-    if resolved.parent not in {snapshot, blobs}:
+    # Newer huggingface_hub/hf-xet caches keep large files in a hub-level content
+    # store (HF_HUB_CACHE/blobs/<2 hex>/<sha256>) and link repository blobs to it.
+    hub_blobs = snapshot.parent.parent.parent / "blobs"
+    in_hub_store = (
+        resolved.parent.parent == hub_blobs
+        and len(resolved.parent.name) == 2
+        and resolved.name.startswith(resolved.parent.name)
+    )
+    if resolved.parent not in {snapshot, blobs} and not in_hub_store:
         raise ValueError(f"Model artifact points outside its snapshot/repository blobs: {name}")
-    # Both materialized cache files and the usual HF blob symlinks are valid.
+    # Materialized cache files, repository blob symlinks and the hub-level content
+    # store are all valid.
     return artifact
 
 

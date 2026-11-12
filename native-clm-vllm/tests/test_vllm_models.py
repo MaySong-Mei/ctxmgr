@@ -133,6 +133,21 @@ class ModelManifestTests(unittest.TestCase):
         self.prepare()
         models.verify_model(self.out / "model.json")
 
+    def test_hub_level_content_store_is_supported(self):
+        weight = self.snapshot / "model.safetensors"
+        content = weight.read_bytes()
+        digest = hashlib.sha256(content).hexdigest()
+        store = self.snapshot.parent.parent.parent / "blobs" / digest[:2]
+        store.mkdir(parents=True)
+        (store / digest).write_bytes(content)
+        repo_blobs = self.snapshot.parent.parent / "blobs"
+        repo_blobs.mkdir()
+        (repo_blobs / "repo-blob").symlink_to(Path("..") / ".." / "blobs" / digest[:2] / digest)
+        weight.unlink()
+        weight.symlink_to(Path("..") / ".." / "blobs" / "repo-blob")
+        self.prepare()
+        models.verify_model(self.out / "model.json")
+
     def test_symlink_outside_repository_is_rejected(self):
         weight = self.snapshot / "model.safetensors"
         external = self.root / "external.safetensors"
