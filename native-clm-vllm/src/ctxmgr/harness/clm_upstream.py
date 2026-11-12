@@ -33,6 +33,23 @@ AGENT_IMPORT = "clm_contextbench:ClmStream"
 CONDITIONS = {
     "clm_self": (AGENT_IMPORT, "clm"),
     "none_same_harness": ("ctxmgr.harness.clm_control:NoManagementStream", "none"),
+    # When-versus-how conditions (ctxmgr.harness.clm_whenhow); none uses the task recipe.
+    "clm_self_noskill": (AGENT_IMPORT, "none"),
+    "clm_fixed": ("ctxmgr.harness.clm_whenhow:FixedTriggerStream", "none"),
+    "mgr_fixed": ("ctxmgr.harness.clm_whenhow:ManagedStream", "none"),
+    "mgr_request": ("ctxmgr.harness.clm_whenhow:ManagedStream", "none"),
+    "mgr_watch": ("ctxmgr.harness.clm_whenhow:ManagedStream", "none"),
+}
+MANAGER_MODES = {"mgr_fixed": "fixed", "mgr_request": "request", "mgr_watch": "watch"}
+# Who decides when / who edits, recorded with every episode.
+EDIT_TRIGGERS = {
+    "clm_self": "self_initiated_bash",
+    "none_same_harness": "disabled",
+    "clm_self_noskill": "self_initiated_bash",
+    "clm_fixed": "harness_trigger_actor_edits",
+    "mgr_fixed": "harness_trigger_manager_edits",
+    "mgr_request": "actor_request_manager_edits",
+    "mgr_watch": "manager_watch_manager_edits",
 }
 
 
@@ -117,11 +134,20 @@ def trial_config(
     profile="official",
     condition="clm_self",
     sampling_overrides=None,
+    manager_model=None,
+    manager_base_url=None,
 ):
     from harbor.models.trial.config import TrialConfig
 
     agent_import, skill = CONDITIONS[condition]
     settings = settings_from_overrides(profile, sampling_overrides)
+    manager_kwargs = {}
+    if condition in MANAGER_MODES:
+        manager_kwargs = {
+            "manager_mode": MANAGER_MODES[condition],
+            "manager_model": f"openai/{manager_model or model}",
+            "manager_api_base": manager_base_url or base_url,
+        }
     env = {"type": environment}
     if environment == "singularity":
         # Keep course/project/home mounts and inherited cwd outside the agent sandbox.
@@ -139,6 +165,7 @@ def trial_config(
                     "skill": skill,
                     "skills_dir": str(ASSETS / "skills"),
                     **settings["profile_overrides"],
+                    **manager_kwargs,
                 },
             },
             "environment": env,
@@ -201,10 +228,19 @@ async def run_episode(args):
         "instance_sha256": manifest["sha256"],
         "condition": condition,
         "implementation": agent_import,
-        "management_enabled": condition == "clm_self",
+        "management_enabled": condition != "none_same_harness",
         "method_skill": skill,
         "actor_model": args.model,
-        "manager_model": None,
+        "manager_model": (
+            (getattr(args, "manager_model", None) or args.model)
+            if condition in MANAGER_MODES
+            else None
+        ),
+        "manager_base_url_kind": (
+            ("separate" if getattr(args, "manager_base_url", None) else "actor_server")
+            if condition in MANAGER_MODES
+            else None
+        ),
         "profile": settings["profile"],
         "backend": args.backend,
         "server_version": args.server_version
@@ -217,10 +253,16 @@ async def run_episode(args):
         "budget": BUDGET,
         "reserve": RESERVE,
         "budget_ruler": args.budget_ruler,
-        "manager_trigger_o200k": None,
-        "manager_max_tokens": None,
-        "edit_prompt_version": f"official-clm:{CLM_COMMIT}" if condition == "clm_self" else None,
-        "edit_trigger": "self_initiated_bash" if condition == "clm_self" else "disabled",
+        "manager_trigger_o200k": (18432 if condition in ("clm_fixed", "mgr_fixed") else None),
+        "manager_max_tokens": (
+            effective_kwargs["max_tokens"] if condition in MANAGER_MODES else None
+        ),
+        "edit_prompt_version": (
+            f"official-clm:{CLM_COMMIT}"
+            if condition == "clm_self"
+            else (f"whenhow-v1:{CLM_COMMIT}" if condition in EDIT_TRIGGERS else None)
+        ),
+        "edit_trigger": EDIT_TRIGGERS[condition],
         "edits_schema": "native-clm-receipts-v1",
         # Both profiles retain the official extra final turn at the budget wall.
         "budget_final_turn_policy": "official:error_finalize",
@@ -234,7 +276,11 @@ async def run_episode(args):
         "prompt_version": (
             f"official-clm:{CLM_COMMIT}"
             if condition == "clm_self"
-            else f"matched-native-none:v1:{CLM_COMMIT}"
+            else (
+                f"matched-native-none:v1:{CLM_COMMIT}"
+                if condition == "none_same_harness"
+                else f"whenhow-v1:{condition}:{CLM_COMMIT}"
+            )
         ),
         "upstream_kwargs": effective_kwargs,
         "official_paper_kwargs": PAPER_KWARGS,
@@ -266,6 +312,8 @@ async def run_episode(args):
             profile=settings["profile"],
             condition=condition,
             sampling_overrides=overrides,
+            manager_model=getattr(args, "manager_model", None),
+            manager_base_url=getattr(args, "manager_base_url", None),
         )
         write_json(out / "harbor-config.json", config.model_dump(mode="json"))
         if args.prepare_only:
@@ -307,6 +355,14 @@ def argument_parser():
     run.add_argument("--model", required=True, help="exact served name, without openai/ prefix")
     run.add_argument("--condition", choices=tuple(CONDITIONS), default="clm_self")
     run.add_argument("--base-url", default="http://127.0.0.1:8000/v1")
+    run.add_argument(
+        "--manager-model",
+        help="served manager name for mgr_* conditions; default: the actor's own model",
+    )
+    run.add_argument(
+        "--manager-base-url",
+        help="manager endpoint for mgr_* conditions; default: the actor's endpoint",
+    )
     run.add_argument("--image", required=True, help="absolute .sif path, or Docker image")
     run.add_argument("--environment", choices=("singularity", "docker"), default="singularity")
     add_sampling_arguments(run)
