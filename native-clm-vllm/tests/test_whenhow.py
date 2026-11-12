@@ -170,6 +170,22 @@ class WhenHowTests(unittest.TestCase):
             self.run_async(agent.before_iteration(env))
         again.assert_not_awaited()
 
+    def test_manager_hears_when_its_edit_changed_nothing(self):
+        agent = self.make(self.w.ManagedStream, manager_mode="fixed")
+        env = FakeEnvironment()
+        replies = [response("", "ls /tmp"), response("", "DELETE_FILLER"), response("DONE")]
+        with patch.object(agent, "_manager_completion", AsyncMock(side_effect=replies)) as call:
+            self.run_async(agent.before_iteration(env))
+        log = agent.events[0]["command_log"]
+        self.assertEqual([entry["command"] for entry in log], ["ls /tmp", "DELETE_FILLER"])
+        self.assertIn("NO change", log[0]["note"])
+        self.assertIn("edit applied", log[1]["note"])
+        # The manager session (one list, extended in place) carries the feedback as a tool result.
+        session = call.await_args_list[-1].args[0]
+        tool_results = [m["content"] for m in session if m["role"] == "tool"]
+        self.assertIn("NO change", tool_results[0])
+        self.assertIn("edit applied", tool_results[1])
+
     def test_actor_edits_are_never_applied_under_a_manager(self):
         from clm_harness.context_utils.context_string import render_editable
 

@@ -114,6 +114,8 @@ class Server:
         while proxy_port == port:
             proxy_port = unused_port()
         argv = server_argv(self.model, os.environ["CLM_SERVE_PYTHON"], port, self.memory)
+        # Report prompt-cache hits per request (vLLM 0.30 omits them unless asked).
+        argv.append("--enable-prompt-tokens-details")
         write_json(
             self.log_dir / f"server-{self.label}.json", {"argv": argv, "memory": self.memory}
         )

@@ -461,7 +461,22 @@ class ManagedMixin(WhenHowMixin):
                 if changed:
                     event["applied_edits"] += 1
                 rendered = await ctx.write_mirror(environment, actor)
+            else:
+                # The same feedback the actor gets when its own edit matches nothing.
+                note = (
+                    f"\n[LIVE_CTX_MAIN.txt: NO change — the file is unchanged, so the agent's "
+                    f"context is still ~{self._tokens()} tokens. Match text that is in the "
+                    "file, or target the real turn headers, which look like "
+                    "`[[CTX_TURN 12 role=assistant]]`.]"
+                )
             output = ctx.format_tool_result(result)
+            event.setdefault("command_log", []).append(
+                {
+                    "command": command[:600],
+                    "output": output[:300],
+                    "note": note.strip()[:200],
+                }
+            )
             session.append(
                 {
                     "role": "tool",
