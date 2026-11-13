@@ -322,10 +322,11 @@ def cell(suite, index):
     from .clm_settings import resolve_settings
 
     suite = Path(suite).resolve()
-    if not 0 <= index < 16:
-        raise ValueError("Cell index must be in 0..15")
+    selections = cells(suite)
+    if not 0 <= index < len(selections):
+        raise ValueError(f"Cell index must be in 0..{len(selections) - 1}")
     ready = validate_ready(suite, verify_image=True)
-    selection = cells(suite)[index]
+    selection = selections[index]
     root = Path(selection["root"])
     root.mkdir(parents=True, exist_ok=False)
     status = {
@@ -735,7 +736,7 @@ def render_report(rows, comparison, status):
         "",
         (
             "This is the requested two-condition, five-model grid, not the instructor's full "
-            "peer-manager grid. Native `clm_self` is distinct from May's JSON `self` protocol. "
+            "peer-manager grid. Native `clm_self` is distinct from the JSON `self` protocol. "
             "Do not pool this BF16 series with prior GGUF/Q8_0 scores or teammate experiments "
             "using different sampling, protocols, or budgets."
         ),

@@ -1,6 +1,6 @@
 {
-  "release": "native-clm-vllm-bf16-3-size-matched-gpus",
-  "prepared_at_utc": "2026-10-31T02:39:13Z",
+  "release": "native-clm-vllm-bf16-4-27b-continuation",
+  "prepared_at_utc": "2026-11-13T20:54:25.087512+00:00",
   "planned_episodes": 240,
   "models": [
     "0.8B",
@@ -10,10 +10,14 @@
     "27B"
   ],
   "local_validation": {
-    "tests_collected": 74,
-    "passed": 71,
-    "errors_missing_dependencies": 2,
-    "skipped": 1
+    "focused_tests": 39,
+    "passed": 39,
+    "scope": [
+      "test_vllm_suite.py",
+      "test_vllm_launcher.py",
+      "test_vllm_resume.py"
+    ],
+    "full_locked_environment_suite_run": false
   },
   "gpu_inference_tested": false,
   "preserved_source_sha256": {
@@ -25,5 +29,17 @@
     "src/ctxmgr/harness/management.py": "0aac62e1bc8257999a43c0414aaae501d001f188b1266b5b32852d1a891cc7ba",
     "uv.lock": "411ec6358e6ddd46724dd89ffa2702c751761e1c3a21e536cf534a8936a727a3",
     "envs/clm/uv.lock": "c4244286ac7f6e1910b14b16f449694a01da993d3bfe31552fcb8c1f75988172"
+  },
+  "continuation": {
+    "target_cells": [
+      16,
+      17,
+      18,
+      19
+    ],
+    "required_existing_grades": 192,
+    "planned_additional_episodes": 48,
+    "preserves_frozen_source": true,
+    "records_runtime_patch": true
   }
 }

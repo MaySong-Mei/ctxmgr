@@ -25,6 +25,34 @@ def blank_rows(root):
 
 
 class SuiteGridTests(unittest.TestCase):
+    def test_27b_cell_indices_reach_readiness_validation(self):
+        fake_official = types.ModuleType("ctxmgr.harness.clm_official")
+        with (
+            patch.dict(sys.modules, {"ctxmgr.harness.clm_official": fake_official}),
+            patch.object(harness, "clm_official", fake_official, create=True),
+            patch.object(
+                suite_module, "validate_ready", side_effect=RuntimeError("readiness reached")
+            ) as validate,
+        ):
+            for index in (0, 15, 16, 17, 18, 19):
+                with self.subTest(index=index):
+                    with self.assertRaisesRegex(RuntimeError, "readiness reached"):
+                        suite_module.cell("/tmp/suite", index)
+            self.assertEqual(validate.call_count, 6)
+
+    def test_cell_indices_outside_the_grid_are_rejected_before_readiness(self):
+        fake_official = types.ModuleType("ctxmgr.harness.clm_official")
+        with (
+            patch.dict(sys.modules, {"ctxmgr.harness.clm_official": fake_official}),
+            patch.object(harness, "clm_official", fake_official, create=True),
+            patch.object(suite_module, "validate_ready") as validate,
+        ):
+            for index in (-1, 20):
+                with self.subTest(index=index):
+                    with self.assertRaisesRegex(ValueError, "Cell index must be in 0..19"):
+                        suite_module.cell("/tmp/suite", index)
+            validate.assert_not_called()
+
     def test_gpu_allocation_checks_model_specific_hardware(self):
         with patch.dict(
             "os.environ",

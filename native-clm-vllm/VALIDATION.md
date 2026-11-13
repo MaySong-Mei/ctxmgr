@@ -1,4 +1,27 @@
-# Validation: size-matched GPU scheduling
+# Validation: 27B cell bounds and guarded continuation
+
+The fixed cell entry point accepts all 20 grid indices. The new continuation
+launcher permits only the four absent 27B cells in an otherwise validated
+192/240 suite. It preserves the actual frozen runtime (including experiment
+variants), records its narrow runtime-only guard repair, and checks existing
+grade artifacts before each worker and after the final report.
+
+Current local verification: 16 suite tests, 11 existing launcher tests and
+12 continuation tests passed (39 total). These cover the 27B boundary, held
+preflight dependencies, duplicate/partial-cell rejection, scheduler failures,
+uncertain submission responses, preserved grades, unknown-runtime rejection,
+real frozen-runtime invocation through a fake client, and report hashes.
+`bash -n` passed for the new launcher and worker. Release checksums were
+regenerated and verified. No live Slurm submission or GPU inference was run
+in this development environment; the original cluster environment and
+source layout are checked by the CPU preflight before GPU work can start.
+
+The dependent continuation report records the patch scope and recalculates
+its hashes. Use `status` to inspect it. Running the original frozen `report`
+command later regenerates the original report format; the separate
+continuation receipt and per-cell provenance remain available.
+
+## Earlier size-matched scheduling validation
 
 The scientific grid remains five Qwen3.5 BF16 sizes, six official task levels,
 seeds 42–45, `none` / native `clm_self`, and 240 planned episodes. Sampling
