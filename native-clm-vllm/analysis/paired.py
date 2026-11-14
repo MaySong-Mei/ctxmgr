@@ -1,4 +1,6 @@
-import collections, math, random, sys
+import math
+import random
+import sys
 
 path = sys.argv[1] if len(sys.argv) > 1 else "cb.tsv"
 R = {}

@@ -1,4 +1,5 @@
-import math, collections
+import collections
+import math
 
 rows = [l.rstrip("\n").split("\t") for l in open("bcp.tsv") if l.startswith("Qwen3.5-")]
 acc = collections.defaultdict(dict)
