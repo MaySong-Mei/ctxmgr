@@ -2,12 +2,13 @@
 #SBATCH --partition=gpu_h200
 #SBATCH --gpus=h200:1
 #SBATCH --cpus-per-task=6
-#SBATCH --mem=160G
+#SBATCH --mem=240G
 #SBATCH --time=1-00:00:00
 # One when-versus-how job: one actor size, one manager kind, one task seed.
 # Submitted by scripts/whenhow.sh with: ROOT BASE_SUITE ACTOR MANAGER SEED.
 set -euo pipefail
 root=${1:?root} base=${2:?base suite} actor=${3:?actor} manager=${4:?manager} seed=${5:?seed}
+instances=${6:-}
 
 [[ -n "${SLURM_JOB_ID:-}" ]] || { echo 'ERROR: run inside a Slurm allocation.' >&2; exit 2; }
 host=$(hostname -s)
@@ -30,4 +31,5 @@ client_python="$base/source/envs/clm/.venv/bin/python"
 source "$root/source/slurm/clm_env.sh"
 printf 'whenhow job %s on %s: actor=%s manager=%s seed=%s\n' "$SLURM_JOB_ID" "$host" "$actor" "$manager" "$seed"
 exec "$client_python" -m ctxmgr.harness.whenhow_suite job \
-    --base-suite "$base" --root "$root" --actor "$actor" --manager "$manager" --seed "$seed"
+    --base-suite "$base" --root "$root" --actor "$actor" --manager "$manager" --seed "$seed" \
+    ${instances:+--instances "$instances"}

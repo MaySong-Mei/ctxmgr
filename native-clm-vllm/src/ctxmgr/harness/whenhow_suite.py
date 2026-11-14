@@ -40,6 +40,9 @@ from .clm_vllm_suite import (
 
 SIZES = ("2B", "4B", "9B", "27B")
 SEEDS = (42, 43, 44, 45)
+# Added seeds get their own instances and matched controls (the base suite has none).
+EXTRA_SEEDS = (46, 47, 48, 49)
+CONTROLS = ("none_same_harness", "clm_self")
 LEVELS = (
     ("needle_retention", "K4-C24"),
     ("needle_retention", "K8-C48"),
@@ -62,12 +65,14 @@ def plan(actor: str, manager: str, seed: int) -> list[dict]:
         raise ValueError(f"actor must be one of {SIZES}")
     if manager == "same":
         conditions = SAME_CONDITIONS
+        if seed in EXTRA_SEEDS:
+            conditions = CONTROLS + SAME_CONDITIONS
     elif manager == LARGE_MANAGER and actor != LARGE_MANAGER:
         conditions = MANAGER_CONDITIONS
     else:
         raise ValueError("manager must be 'same', or '27B' for a smaller actor")
-    if seed not in SEEDS:
-        raise ValueError(f"seed must be one of {SEEDS}")
+    if seed not in SEEDS + EXTRA_SEEDS:
+        raise ValueError(f"seed must be one of {SEEDS + EXTRA_SEEDS}")
     rows = []
     for condition in conditions:
         managed = condition in MANAGER_CONDITIONS
@@ -228,11 +233,13 @@ def episode_argv(row: dict, *, instance: Path, out: Path, ready: dict, models: d
     return argv
 
 
-def job(base_suite: Path, root: Path, actor: str, manager: str, seed: int) -> int:
+def job(
+    base_suite: Path, root: Path, actor: str, manager: str, seed: int, instances: Path | None = None
+) -> int:
     base_suite, root = base_suite.resolve(), root.resolve()
     ready = validate_ready(base_suite, verify_image=True)
     rows = plan(actor, manager, seed)
-    instances = base_suite / "shared" / "instances"
+    instances = (instances or base_suite / "shared" / "instances").resolve()
     for row in rows:
         if not (instances / row["name"]).is_dir():
             raise FileNotFoundError(f"Missing shared instance {row['name']} in {instances}")
@@ -368,6 +375,22 @@ def collect(root: Path) -> list[dict]:
     return rows
 
 
+def make_instances(out: Path, seeds: tuple[int, ...]) -> list[dict]:
+    """Generate and validate the grid's task instances for added seeds (gold stays host-side)."""
+    from ctxmgr.tasks import generate_instance, validate_instance
+
+    out.mkdir(parents=True, exist_ok=True)
+    made = []
+    for seed in seeds:
+        for family, level in LEVELS:
+            target = out / f"{family}-{level}-s{seed}"
+            if not target.exists():
+                generate_instance(family, level, seed, target)
+            made.append({"name": target.name, **validate_instance(target)})
+    write_json(out / "instances.json", made)
+    return made
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -376,12 +399,19 @@ def main(argv=None) -> int:
     run.add_argument("--root", type=Path, required=True)
     run.add_argument("--actor", choices=SIZES, required=True)
     run.add_argument("--manager", choices=("same", LARGE_MANAGER), required=True)
-    run.add_argument("--seed", type=int, choices=SEEDS, required=True)
+    run.add_argument("--seed", type=int, choices=SEEDS + EXTRA_SEEDS, required=True)
+    run.add_argument("--instances", type=Path, help="default: the base suite's shared instances")
+    make = commands.add_parser("instances")
+    make.add_argument("--out", type=Path, required=True)
     show = commands.add_parser("collect")
     show.add_argument("--root", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "job":
-        return job(args.base_suite, args.root, args.actor, args.manager, args.seed)
+        return job(args.base_suite, args.root, args.actor, args.manager, args.seed, args.instances)
+    if args.command == "instances":
+        made = make_instances(args.out, EXTRA_SEEDS)
+        print(json.dumps({"instances": len(made)}))
+        return 0
     rows = collect(args.root)
     write_json(args.root / "results.json", rows)
     print(json.dumps({"episodes": len(rows)}, indent=2))

@@ -30,6 +30,14 @@ class WhenHowPlanTests(unittest.TestCase):
                 total += len(big)
         self.assertEqual(total, 464)
 
+    def test_added_seeds_carry_matched_controls(self):
+        rows = suite.plan("4B", "same", 47)
+        tags = {row["tag"] for row in rows}
+        self.assertIn("none_same_harness", tags)
+        self.assertIn("clm_self", tags)
+        self.assertEqual(len(rows), 7 * 4)
+        self.assertEqual(len(suite.plan("4B", "27B", 47)), 3 * 4)
+
     def test_invalid_combinations_are_rejected(self):
         with self.assertRaises(ValueError):
             suite.plan("27B", "27B", 42)
