@@ -1,0 +1,18 @@
+[project]
+name = "ctxmgr-clm-runtime"
+version = "0.1.0"
+description = "Isolated official CLM client runtime; serving keeps the root environment."
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "clm",
+    "contextbench[tokenizer]",
+    "litellm==1.105.1",
+    "tiktoken==0.14.0",
+]
+
+[dependency-groups]
+dev = ["pytest==9.1.1", "ruff==0.17.0"]
+
+[tool.uv.sources]
+clm = { git = "https://github.com/facebookresearch/context-language-models.git", rev = "483198229ab7b90c0eed4651306ab3b3505aaf50" }
+contextbench = { git = "https://github.com/RulinShao/ContextBench.git", rev = "fb533c18c78a82d3f1b2047a9c1700735cf829ae" }

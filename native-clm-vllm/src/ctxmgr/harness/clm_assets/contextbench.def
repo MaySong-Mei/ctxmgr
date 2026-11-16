@@ -1,0 +1,29 @@
+# Singularity/Apptainer recipe for the ContextBench task image.
+#
+#   apptainer build contextbench.sif contextbench.def
+#
+# Then package tasks with `contextbench package --image /abs/path/contextbench.sif`.
+# On Docker backends any python:3.x-slim image with tmux works the same way.
+#
+# The base layer is pinned by digest so a rebuild is reproducible.
+Bootstrap: docker
+From: python@sha256:ed86c82274b3c69b52fb5820f358f0bd7df0b603332063cb5c6e32bd220c3e6e
+
+%post
+    mkdir -p /app /logs
+    chmod 777 /logs
+    # Harbor's in-container exec server bootstraps with /usr/bin/python3, and a
+    # read-only SIF cannot install one at trial time. The python:*-slim images ship
+    # the interpreter at /usr/local/bin/python3 only.
+    ln -sf /usr/local/bin/python3 /usr/bin/python3
+    ln -sf /usr/local/bin/python  /usr/bin/python
+
+    # Bake in the exec server's dependencies, so trials also work on nodes without
+    # package-index access (Harbor's bootstrap skips its install when these import).
+    python3 -m venv /opt/harbor-server
+    /opt/harbor-server/bin/pip install --no-cache-dir -q uvicorn fastapi
+    /opt/harbor-server/bin/python3 -c "import uvicorn, fastapi; print('harbor-server deps OK')"
+    # tmux: terminus-2 drives the shell through it. asciinema: optional recordings.
+    apt-get update -qq && apt-get install -y -qq tmux && apt-get clean && rm -rf /var/lib/apt/lists/*
+    pip3 install --no-cache-dir -q asciinema || true
+    chmod -R a+rX /opt/harbor-server
