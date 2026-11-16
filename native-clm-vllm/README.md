@@ -234,3 +234,12 @@ point is `scripts/clm_vllm.sh`. Historical scripts/CLIs do not define this exper
 AI assistance implemented the new orchestration, transport compatibility,
 provenance validation, tests and reporting. Humans remain responsible for
 experimental interpretation and publication.
+
+## When-versus-how study
+
+The same harness also runs the when-versus-how conditions (`clm_whenhow.py`: harness-timed
+self-management and separate managers under harness, actor-request and watching timing),
+a ContextBench grid over seeds 42–49 (`whenhow_suite.py`, `scripts/whenhow.sh`) and
+BrowseComp-Plus (`ctxmgr.bcp`, `scripts/bcp.sh`). Design, results and reproduction steps:
+[`docs/whenhow-results.md`](docs/whenhow-results.md). Two fixes to this suite came with it:
+27B cells (indices 16–19) now run, and setup accepts Hugging Face's hub-level blob store.
